@@ -42,6 +42,12 @@
   .links a.secondary { color: var(--accent); border: 1px solid var(--border); }
   .links a:hover { filter: brightness(1.08); }
   .kind { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .screener { font-size: 13px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .screener summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+  .screener p { margin: 6px 0 4px; font-size: 13px; }
+  .screener ol { margin: 4px 0 0; padding-left: 18px; }
+  .screener li { margin: 4px 0; }
+  .screener b { color: var(--ink); }
   .warn { font-size: 13px; color: var(--ink); background: rgba(237,161,0,0.14); border: 1px solid rgba(237,161,0,0.45); border-radius: 8px; padding: 8px 10px; }
   footer { color: var(--muted); font-size: 13px; padding: 40px 0 60px; }
 </style>
@@ -90,6 +96,15 @@
         <p>Does trust in AI advice depend on where its errors fall? A 30-week warehouse simulation with a calibrated LightGBM stockout-risk model (AUROC 0.897), deployed as a live study.</p>
         <div class="tags"><span>Python</span><span>LightGBM</span><span>Behavioral research</span><span>Render + Postgres</span></div>
         <div class="warn" role="note">⚠️ <b>Live research study.</b> Starting a session adds a real response to the study data. Please take part only if you mean to.</div>
+        <details class="screener">
+          <summary>Numeracy screener answers</summary>
+          <p>The study opens with three numeracy questions (Schwartz et al., 1997); two of three correct are needed to continue.</p>
+          <ol>
+            <li>A fair six-sided die is rolled 1,000 times. How many times would it come up even (2, 4 or 6)? <b>500</b></li>
+            <li>A lottery prize has a 1% chance of winning. If 1,000 people each buy one ticket, how many win? <b>10</b></li>
+            <li>A sweepstakes car has a 1 in 1,000 chance of winning. What percent of tickets win? <b>0.1</b> (type 0.1, meaning 0.1%)</li>
+          </ol>
+        </details>
         <div class="links"><a class="primary live-study" href="https://reliance-study.onrender.com" target="_blank" rel="noopener">▶ Open the live study</a><a class="secondary" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption">Read the project</a></div>
       </div>
     </article>
