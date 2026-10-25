@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global Hunger Index · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .bubble { transition: opacity .2s; cursor: pointer; }
+  .country-list { display: grid; gap: 6px; font-size: 13px; }
+  .country-row { display: grid; grid-template-columns: minmax(0,1fr) repeat(4, 42px); white-space: nowrap; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 6px; }
+  .country-row.head { color: var(--text-muted); font-size: 11px; }
+  .country-row span.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .country-row.pinned { background: var(--accent-wash); }
+  .country-row button { all: unset; cursor: pointer; }
+  input[type=search] { width: 100%; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#hunger">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · Global Hunger Index data</div>
+  <h1>🌍 Hunger Over Time, 1990 → 2014</h1>
+  <p class="lede">All 130 countries in the Global Hunger Index dataset, animated across five periods. Each bubble is a country, and bubble size is the third indicator. Press play to watch the world move, or click any bubble to follow its path.</p>
+  <p class="how">The five countries from the Tableau dashboard (Burundi, Chad, Ethiopia, Bangladesh, India) are pinned to start. Periods: undernourishment 1990-92 … 2011-13, child underweight 1988-92 … 2009-13, under-5 mortality 1990 … 2012.</p>
+</header>
+
+<div class="layout wide-left">
+  <div class="panel">
+    <div class="controls">
+      <label>X axis <select id="xSel"></select></label>
+      <label>Y axis <select id="ySel"></select></label>
+      <label>Bubble size <select id="rSel"></select></label>
+      <label><input type="checkbox" id="trails" checked> Trails</label>
+    </div>
+    <div id="tl"></div>
+    <div class="chart" id="chart"></div>
+    <div id="legend"></div>
+  </div>
+  <aside class="stack">
+    <div class="panel">
+      <h2>Pinned countries</h2>
+      <div class="sub" id="periodNote"></div>
+      <div class="country-list" id="list"></div>
+    </div>
+    <div class="panel">
+      <h2>Find a country</h2>
+      <input type="search" id="search" placeholder="Type a name, then Enter to pin" list="names" aria-label="Find a country">
+      <datalist id="names"></datalist>
+      <div class="controls" style="margin-top:10px">
+        <button class="btn" id="clear" type="button">Clear pins</button>
+        <button class="btn" id="focus5" type="button">Focus 5</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="panel">
+  <h2>What to look for</h2>
+  <ul class="notes">
+    <li><b>Burundi moves the wrong way.</b> Undernourishment climbs from 44% to 67% while most of the world drifts down and left.</li>
+    <li><b>Bangladesh and India</b> cut undernourishment sharply, but child underweight stays high (37% and 31%). This is the gap the dashboard pointed out.</li>
+    <li><b>Switch the Y axis to under-5 mortality</b> and you'll see Chad sitting well above countries with similar hunger levels.</li>
+  </ul>
+</div>
+</main>
+<footer class="wrap">Source: <code>2014GHIdata.xlsx</code> (sheet 2014GHIData), IFPRI Global Hunger Index. Values marked as estimates in the source are included. Countries missing a value for a period fade out until data resumes.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/hunger.js"></script>
+<script>
+(() => {
+  const K = Kit, D = window.MODEL_DATA;
+  const IND = {
+    under: { name: 'Undernourished (% of population)', short: 'Undernourished', max: 80 },
+    weight: { name: 'Underweight children under 5 (%)', short: 'Underweight', max: 70 },
+    mort: { name: 'Under-5 mortality (%)', short: 'Mortality', max: 35 },
+    ghi: { name: 'GHI score', short: 'GHI', max: 70 },
+  };
+  let xk = 'under', yk = 'weight', rk = 'mort', pos = 4;
+  const pinned = new Set(D.focus);
+  const sel = (id, v) => { const s = document.getElementById(id); Object.entries(IND).forEach(([k, o]) => K.html('option', { value: k, text: o.short }, s)); s.value = v; return s; };
+  const xS = sel('xSel', xk), yS = sel('ySel', yk), rS = sel('rSel', rk);
+  const dl = document.getElementById('names');
+  D.countries.forEach(c => K.html('option', { value: c.name }, dl));
+
+  // value at fractional period: interpolate when both ends exist, else nearest available
+  const at = (c, k, p) => {
+    const i = Math.floor(p), j = Math.min(4, i + 1), t = p - i, a = c[k][i], b = c[k][j];
+    if (a != null && b != null) return { v: K.lerp(a, b, t), ok: 1 };
+    if (a != null) return { v: a, ok: 1 - t };
+    if (b != null) return { v: b, ok: t };
+    return { v: null, ok: 0 };
+  };
+
+  const box = document.getElementById('chart');
+  let scales = null, axisAnim = null, svg, gPts, gTrail, gLbl, nodes = {};
+
+  function build() {
+    box.replaceChildren(); nodes = {};
+    const W = box.clientWidth || 760, H = Math.max(420, Math.min(560, W * 0.62)), m = { l: 48, r: 16, t: 12, b: 44 };
+    svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Animated bubble chart of hunger indicators' }, box);
+    scales = { W, H, m, xmax: IND[xk].max, ymax: IND[yk].max };
+    const sx = v => m.l + (v / scales.xmax) * (W - m.l - m.r), sy = v => m.t + (1 - v / scales.ymax) * (H - m.t - m.b);
+    scales.sx = sx; scales.sy = sy;
+    const gx = K.nice(scales.xmax, 5), gy = K.nice(scales.ymax, 5);
+    for (let v = 0; v <= scales.ymax + 1e-6; v += gy.step) { K.el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg); K.txt(svg, m.l - 6, sy(v) + 4, v, { 'text-anchor': 'end', class: 'muted' }); }
+    for (let v = 0; v <= scales.xmax + 1e-6; v += gx.step) { K.el('line', { x1: sx(v), x2: sx(v), y1: m.t, y2: H - m.b, style: 'stroke:var(--grid)' }, svg); K.txt(svg, sx(v), H - m.b + 16, v, { 'text-anchor': 'middle', class: 'muted' }); }
+    K.txt(svg, (m.l + W - m.r) / 2, H - 6, IND[xk].name, { 'text-anchor': 'middle' });
+    K.txt(svg, m.l + 6, m.t + 14, IND[yk].name, { class: 'muted' });
+    gTrail = K.el('g', {}, svg); gPts = K.el('g', {}, svg); gLbl = K.el('g', {}, svg);
+    D.countries.forEach(c => {
+      const circ = K.el('circle', { class: 'bubble', r: 4 }, gPts);
+      circ.addEventListener('pointermove', e => {
+        const x = at(c, xk, pos), y = at(c, yk, pos), r = at(c, rk, pos), period = D.periods[Math.round(pos)];
+        K.tip(e, `${c.name} · ${period}`, [
+          { value: K.fmt.one(x.v), name: IND[xk].short }, { value: K.fmt.one(y.v), name: IND[yk].short }, { value: K.fmt.one(r.v), name: IND[rk].short + ' (size)' }]);
+      });
+      circ.addEventListener('pointerleave', K.hideTip);
+      circ.addEventListener('click', () => { pinned.has(c.name) ? pinned.delete(c.name) : pinned.add(c.name); draw(); list(); });
+      nodes[c.name] = { c, circ };
+    });
+    draw();
+  }
+
+  function draw() {
+    if (!scales) return;
+    const { sx, sy } = scales;
+    const rmax = IND[rk].max, R = v => 3 + 13 * Math.sqrt(Math.max(0, v) / rmax);
+    gTrail.replaceChildren(); gLbl.replaceChildren();
+    const order = [];
+    D.countries.forEach(c => {
+      const { circ } = nodes[c.name];
+      const x = at(c, xk, pos), y = at(c, yk, pos), r = at(c, rk, pos);
+      const ok = Math.min(x.ok, y.ok);
+      const pin = pinned.has(c.name);
+      if (ok <= 0 || x.v == null || y.v == null) { circ.style.opacity = 0; circ.style.pointerEvents = 'none'; return; }
+      circ.setAttribute('cx', sx(Math.min(x.v, scales.xmax))); circ.setAttribute('cy', sy(Math.min(y.v, scales.ymax)));
+      circ.setAttribute('r', R(r.v ?? 0));
+      circ.style.fill = 'var(--series-1)';
+      circ.style.fillOpacity = pin ? 0.95 : 0.28;
+      circ.style.stroke = 'var(--surface-1)'; circ.style.strokeWidth = 1.5;
+      circ.style.opacity = ok; circ.style.pointerEvents = 'auto';
+      if (pin) order.push(c);
+    });
+    // pinned on top, with trails and labels
+    order.forEach(c => {
+      const { circ } = nodes[c.name]; gPts.appendChild(circ);
+      if (document.getElementById('trails').checked) {
+        const pts = [];
+        for (let i = 0; i <= Math.floor(pos); i++) if (c[xk][i] != null && c[yk][i] != null) pts.push([sx(Math.min(c[xk][i], scales.xmax)), sy(Math.min(c[yk][i], scales.ymax))]);
+        pts.push([+circ.getAttribute('cx'), +circ.getAttribute('cy')]);
+        if (pts.length > 1) K.el('polyline', { points: pts.map(p => p.join(',')).join(' '), fill: 'none', style: 'stroke:var(--series-1);stroke-width:1.5;opacity:.55' }, gTrail);
+        pts.slice(0, -1).forEach(p => K.el('circle', { cx: p[0], cy: p[1], r: 2, style: 'fill:var(--series-1);opacity:.55' }, gTrail));
+      }
+      const cx = +circ.getAttribute('cx'), cy = +circ.getAttribute('cy'), r = +circ.getAttribute('r');
+      K.txt(gLbl, cx + r + 4, cy + 4, c.name, { class: 'val', style: 'paint-order:stroke;stroke:var(--surface-1);stroke-width:3px' });
+    });
+    document.getElementById('periodNote').textContent = 'Values for ' + D.periods[Math.round(pos)];
+  }
+
+  function list() {
+    const L = document.getElementById('list'); L.replaceChildren();
+    const head = K.html('div', { className: 'country-row head' }, L);
+    ['Country', 'GHI', 'Under.', 'Wt.', 'Mort.'].forEach((h, i) => K.html('span', { text: h, className: i ? 'n' : '' }, head));
+    const p = Math.round(pos);
+    [...pinned].map(n => nodes[n]?.c).filter(Boolean).sort((a, b) => (b.ghi[p] ?? -1) - (a.ghi[p] ?? -1)).forEach(c => {
+      const row = K.html('div', { className: 'country-row pinned' }, L);
+      const b = K.html('button', { type: 'button', text: '✕ ' + c.name, title: 'Unpin' }, row);
+      b.addEventListener('click', () => { pinned.delete(c.name); draw(); list(); });
+      ['ghi', 'under', 'weight', 'mort'].forEach(k => K.html('span', { className: 'n', text: K.fmt.one(c[k][p]) }, row));
+    });
+    if (!pinned.size) K.html('div', { className: 'sub', text: 'Click bubbles or search to pin countries.' }, L);
+  }
+
+  const tl = K.timeline(document.getElementById('tl'), { labels: D.periods, speed: 0.55, onChange: p => { pos = p; draw(); if (Math.abs(p - Math.round(p)) < 0.02) list(); } });
+  const swap = () => { xk = xS.value; yk = yS.value; rk = rS.value; build(); };
+  [xS, yS, rS].forEach(s => s.addEventListener('change', swap));
+  document.getElementById('trails').addEventListener('change', draw);
+  document.getElementById('clear').addEventListener('click', () => { pinned.clear(); draw(); list(); });
+  document.getElementById('focus5').addEventListener('click', () => { pinned.clear(); D.focus.forEach(n => pinned.add(n)); draw(); list(); });
+  const search = document.getElementById('search');
+  search.addEventListener('change', () => { if (nodes[search.value]) { pinned.add(search.value); search.value = ''; draw(); list(); } });
+
+  K.legend(document.getElementById('legend'), [['Pinned country (with trail)', 'var(--series-1)'], ['Other countries', 'color-mix(in srgb, var(--series-1) 30%, transparent)']], 'dot');
+  build(); tl.set(+K.param('t', 4)); list();
+  K.onResize(build);
+  K.themeToggle(document.getElementById('theme'));
+})();
+</script>
+</body>
+</html>

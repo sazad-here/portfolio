@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hospital Profit DSS · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#profit">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · Excel decision-support system</div>
+  <h1>💰 Hospital Profit Simulator</h1>
+  <p class="lede">The same formulas as the Excel DSS, running live. Pick a state, drag any input, and watch revenue flow down to net income. For Ohio, the presets replay the three plans that cleared the $850K target.</p>
+  <p class="how">Formulas: revenue = volume × unit rate · bed revenue = beds × cost per bed × hospitals · deductions 5% · salaries $16,000 + 1.5 × beds × hospitals · benefits 12% · supplies $210 + 8.5% of revenue · fees $2,200 · depreciation $1,250 (per 1,000 population).</p>
+</header>
+
+<div class="layout">
+  <aside class="panel">
+    <div class="controls">
+      <label>State <select id="state"></select></label>
+    </div>
+    <div id="presets" class="controls"></div>
+    <div id="sliders"></div>
+    <button class="btn" id="reset" type="button">Reset to base</button>
+  </aside>
+
+  <div class="stack">
+    <div class="panel">
+      <div class="stats">
+        <div class="stat"><div class="label">Net income</div><div class="hero-num" id="ni">–</div><div class="note" id="niNote"></div></div>
+        <div class="stat"><div class="label">Gap to $850K target</div><div class="value" id="gap">–</div><div class="note" id="gapNote"></div></div>
+        <div class="stat"><div class="label">Total revenue</div><div class="value" id="tr">–</div></div>
+        <div class="stat"><div class="label">Profit margin</div><div class="value" id="margin">–</div><div class="note">net income ÷ total revenue</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>From revenue to net income</h2>
+      <div class="sub">Each step adds or subtracts. Bars animate when an input changes.</div>
+      <div id="legendW"></div>
+      <div class="chart" id="waterfall"></div>
+    </div>
+    <div class="panel">
+      <h2>Which lever moves net income most?</h2>
+      <div class="sub">Change in net income if each input rises 10% from its current value</div>
+      <div class="chart" id="tornado"></div>
+    </div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Inputs: the model's base data for five states. Scenarios: the original Excel workbook. Every output is recomputed in your browser with the same formulas.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/profit.js"></script>
+<script>
+(() => {
+  const K = Kit, D = window.MODEL_DATA, f = K.fmt;
+  const FIELDS = [
+    ['hospitals', '# of hospitals', 50, 600, 10, v => v.toFixed(0)],
+    ['beds', 'Beds per 1,000', 1, 5, 0.1, v => v.toFixed(1)],
+    ['costPerBed', 'Cost per bed ($)', 40, 150, 1, v => '$' + v],
+    ['inpDays', 'Inpatient days / 1,000', 200, 1500, 10, v => v.toLocaleString()],
+    ['inpRate', 'Rate per inpatient day ($)', 200, 3500, 25, v => '$' + v.toLocaleString()],
+    ['outVisits', 'Outpatient visits / 1,000', 500, 3000, 10, v => v.toLocaleString()],
+    ['outRate', 'Rate per outpatient visit ($)', 50, 250, 1, v => '$' + v],
+    ['erVisits', 'ER visits / 1,000', 100, 700, 5, v => v.toLocaleString()],
+    ['erRate', 'Rate per ER visit ($)', 200, 4000, 25, v => '$' + v.toLocaleString()],
+  ];
+  const model = x => {
+    const inp = x.inpDays * x.inpRate, er = x.erVisits * x.erRate, out = x.outVisits * x.outRate;
+    const bed = x.beds * x.costPerBed * x.hospitals, tr = inp + er + out + bed, ded = 0.05 * tr;
+    const sal = 16000 + 1.5 * x.beds * x.hospitals, ben = 0.12 * sal, sup = 210 + 0.085 * tr, fees = 2200, dep = 1250;
+    const te = sal + ben + sup + fees + dep;
+    return { inp, er, out, bed, tr, ded, nr: tr - ded, sal, ben, sup, fees, dep, te, ni: tr - ded - te };
+  };
+
+  let si = 4, base = {}, cur = {}, preset = 'Base';
+  const stateSel = document.getElementById('state');
+  D.states.forEach((s, i) => K.html('option', { value: i, text: s }, stateSel));
+  stateSel.value = si;
+
+  // sliders
+  const box = document.getElementById('sliders'), inputs = {};
+  FIELDS.forEach(([k, name, min, max, step, fmt]) => {
+    const row = K.html('div', { className: 'slider' }, box);
+    K.html('span', { className: 'name', text: name }, row);
+    const val = K.html('span', { className: 'value' }, row);
+    const r = K.html('input', { type: 'range', min, max, step }, row);
+    r.setAttribute('aria-label', name);
+    r.addEventListener('input', () => { cur[k] = +r.value; preset = null; sync(); });
+    inputs[k] = { r, val, fmt };
+  });
+
+  const presetBox = document.getElementById('presets');
+  function drawPresets() {
+    presetBox.replaceChildren();
+    if (D.states[si] !== 'Ohio') return;
+    Object.keys(D.ohioPlans).forEach(p => {
+      const b = K.html('button', { className: 'btn' + (preset === p ? ' on' : ''), type: 'button', text: p }, presetBox);
+      b.addEventListener('click', () => { preset = p; cur = { ...base, ...D.ohioPlans[p] }; sync(); });
+    });
+  }
+  function loadState() {
+    base = {}; for (const k in D.inputs) base[k] = D.inputs[k][si];
+    cur = { ...base }; preset = 'Base'; sync();
+  }
+  stateSel.addEventListener('change', () => { si = +stateSel.value; loadState(); });
+  document.getElementById('reset').addEventListener('click', loadState);
+
+  // ---- waterfall ----
+  const wf = document.getElementById('waterfall');
+  K.legend(document.getElementById('legendW'), [['Adds revenue', 'var(--series-1)'], ['Subtracts', 'var(--series-2)'], ['Subtotal', 'var(--text-muted)']]);
+  let shown = null, cancel = () => {};
+  const steps = m => [
+    ['Inpatient', m.inp, 'add'], ['Emergency', m.er, 'add'], ['Outpatient', m.out, 'add'], ['Beds', m.bed, 'add'],
+    ['Total revenue', m.tr, 'total'], ['Deductions', -m.ded, 'sub'], ['Salaries + benefits', -(m.sal + m.ben), 'sub'],
+    ['Supplies', -m.sup, 'sub'], ['Fees + depreciation', -(m.fees + m.dep), 'sub'], ['Net income', m.ni, 'total'],
+  ];
+  function drawWaterfall(vals) {
+    wf.replaceChildren();
+    const W = wf.clientWidth || 700, H = 330, m = { l: 56, r: 8, t: 22, b: 48 };
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Waterfall from revenue to net income' }, wf);
+    const top = Math.max(vals[4][1], D.target * 1.1, 1);
+    const lo = Math.min(0, vals[9][1]);
+    const { step } = K.nice(top - lo, 5);
+    const ymin = lo < 0 ? -Math.ceil(-lo / step) * step : 0;
+    const ymax = Math.ceil(top / step) * step;
+    const sy = v => m.t + (1 - (v - ymin) / (ymax - ymin)) * (H - m.t - m.b);
+    for (let v = ymin; v <= ymax + 1e-6; v += step) {
+      K.el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg);
+      K.txt(svg, m.l - 6, sy(v) + 4, f.money(v), { 'text-anchor': 'end', class: 'muted' });
+    }
+    const band = (W - m.l - m.r) / vals.length, bw = Math.min(40, band * 0.62);
+    let run = 0;
+    vals.forEach(([label, v, kind], i) => {
+      let y0, y1;
+      if (kind === 'total') { y0 = 0; y1 = v; run = v; }
+      else { y0 = run; y1 = run + v; run = y1; }
+      const x = m.l + band * i + (band - bw) / 2;
+      const yt = sy(Math.max(y0, y1)), yb = sy(Math.min(y0, y1));
+      const color = kind === 'add' ? 'var(--series-1)' : kind === 'sub' ? 'var(--series-2)' : 'var(--text-muted)';
+      const h = Math.max(1, yb - yt);
+      K.el('rect', { x, y: yt, width: bw, height: h, rx: 3, style: `fill:${color}` }, svg);
+      if (i < vals.length - 1) {
+        const nextY = sy(run);
+        K.el('line', { x1: x + bw, x2: x + band, y1: nextY, y2: nextY, style: 'stroke:var(--axis);stroke-dasharray:0' }, svg);
+      }
+      const lbl = (v >= 0 || kind === 'total' ? '' : '−') + f.money(Math.abs(v)).replace('−', '');
+      K.txt(svg, x + bw / 2, yt - 6, kind === 'total' && v < 0 ? f.money(v) : lbl, { 'text-anchor': 'middle', class: kind === 'total' ? 'val' : '' });
+      const words = label.split(' ');
+      K.txt(svg, x + bw / 2, H - 30, words.slice(0, 2).join(' '), { 'text-anchor': 'middle' });
+      if (words.length > 2) K.txt(svg, x + bw / 2, H - 16, words.slice(2).join(' '), { 'text-anchor': 'middle' });
+      const hit = K.el('rect', { x: m.l + band * i, y: m.t, width: band, height: H - m.t - m.b, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', e => K.tip(e, label, [{ value: f.money(v), color }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+    K.el('line', { x1: m.l, x2: W - m.r, y1: sy(0), y2: sy(0), style: 'stroke:var(--axis)' }, svg);
+    const ty = sy(D.target);
+    K.el('line', { x1: m.l, x2: W - m.r, y1: ty, y2: ty, style: 'stroke:var(--text-primary);stroke-width:1.5' }, svg);
+    K.txt(svg, W - m.r, ty - 6, '$850K target', { 'text-anchor': 'end', class: 'val' });
+  }
+  function animateWaterfall(next) {
+    cancel();
+    const from = shown || next.map(s => [s[0], 0, s[2]]);
+    cancel = K.animate(450, t => {
+      shown = next.map((s, i) => [s[0], K.lerp(from[i][1], s[1], t), s[2]]);
+      drawWaterfall(shown);
+    });
+  }
+
+  // ---- sensitivity ("tornado") ----
+  const tor = document.getElementById('tornado');
+  let torShown = null, torCancel = () => {};
+  function drawTornado(rows) {
+    tor.replaceChildren();
+    const W = tor.clientWidth || 700, lw = 200, right = 70, thick = 16, gap = 9;
+    const H = rows.length * (thick + gap) + 8;
+    const svg = K.el('svg', { width: W, height: H, role: 'img' }, tor);
+    const max = Math.max(1, ...rows.map(r => Math.abs(r[1])));
+    const sx = v => lw + (v / max) * (W - lw - right);
+    rows.forEach(([label, v], i) => {
+      const y = 4 + i * (thick + gap);
+      K.txt(svg, lw - 8, y + thick / 2 + 4, label, { 'text-anchor': 'end' });
+      const w = Math.max(1, sx(Math.abs(v)) - lw);
+      K.el('rect', { x: lw, y, width: w, height: thick, rx: 3, style: `fill:${v >= 0 ? 'var(--series-1)' : 'var(--series-2)'}` }, svg);
+      K.txt(svg, lw + w + 6, y + thick / 2 + 4, (v >= 0 ? '+' : '') + f.money(v), { class: 'val' });
+    });
+  }
+  function updateTornado() {
+    const n0 = model(cur).ni;
+    const rows = FIELDS.map(([k, name]) => [name.replace(/ \(\$\)/, ''), model({ ...cur, [k]: cur[k] * 1.1 }).ni - n0])
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    torCancel();
+    const prev = torShown ? Object.fromEntries(torShown) : {};
+    torCancel = K.animate(450, t => { torShown = rows.map(([l, v]) => [l, K.lerp(prev[l] ?? 0, v, t)]); drawTornado(torShown); });
+  }
+
+  // ---- sync ----
+  function sync() {
+    FIELDS.forEach(([k]) => {
+      const { r, val, fmt } = inputs[k];
+      r.value = cur[k]; val.textContent = fmt(cur[k]);
+      val.classList.toggle('changed', Math.abs(cur[k] - base[k]) > 1e-9);
+    });
+    drawPresets();
+    const m = model(cur);
+    document.getElementById('ni').textContent = f.money(m.ni);
+    document.getElementById('niNote').textContent = preset ? preset + ' scenario' : 'custom inputs';
+    const gap = m.ni - D.target;
+    document.getElementById('gap').textContent = (gap >= 0 ? '✅ +' : '⚠️ ') + f.money(gap);
+    document.getElementById('gapNote').textContent = gap >= 0 ? 'target met' : 'short of target';
+    document.getElementById('tr').textContent = f.money(m.tr);
+    document.getElementById('margin').textContent = (100 * m.ni / m.tr).toFixed(1) + '%';
+    animateWaterfall(steps(m));
+    updateTornado();
+  }
+
+  loadState();
+  K.onResize(() => { drawWaterfall(shown); drawTornado(torShown); });
+  K.themeToggle(document.getElementById('theme'));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Normalise line endings so the repo is consistent regardless of who clones it.
+* text=auto eol=lf
+
+# Data files are text but should never be munged by diff heuristics.
+*.csv text eol=lf
+
+# GitHub Linguist classifies .sql as a data format and excludes it from the
+# repository language statistics by default. SQL is a primary language here,
+# so force it to count.
+*.sql linguist-detectable=true
+
+# Keep binary assets binary once redacted screenshots are added.
+*.png binary
+*.jpg binary

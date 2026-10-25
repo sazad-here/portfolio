@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>California Hospital Financials · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .tour { display: grid; gap: 8px; }
+  .tour button { text-align: left; border-radius: 10px; padding: 8px 12px; }
+  .answer { background: var(--surface-2); border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 14px; color: var(--text-secondary); min-height: 90px; }
+  .answer b.big { display: block; font-size: 24px; color: var(--text-primary); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .legend button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .legend button[aria-pressed=false] { opacity: .35; }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#hcai">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · HCAI hospital financial disclosures</div>
+  <h1>🏥 444 Reports, 432 Hospitals: The Financial Explorer</h1>
+  <p class="lede">Every California hospital financial report in the 2020–21 HCAI extract, one dot each. Take the guided tour through the executive questions, or pick your own axes. Then merge the duplicate filings and watch the counts correct themselves.</p>
+  <p class="how">Debt ratio = total liabilities ÷ total assets · operating margin = net income ÷ net patient revenue · payer mix = Medicare + Medi-Cal share of net patient revenue. Margins beyond ±60% are pinned to the edge (hollow dots).</p>
+</header>
+
+<div class="layout">
+  <aside class="stack">
+    <div class="panel">
+      <h2>Guided tour</h2>
+      <div class="sub">The questions a hospital executive would ask</div>
+      <div class="tour" id="tour"></div>
+      <div class="answer" id="answer">Pick a question to fly to its answer.</div>
+    </div>
+    <div class="panel">
+      <h2>Data integrity</h2>
+      <div class="stats">
+        <div class="stat"><div class="label">Dots shown</div><div class="value" id="cDots">444</div><div class="note" id="cDotsNote">filed reports</div></div>
+        <div class="stat"><div class="label">Unique hospitals</div><div class="value">432</div><div class="note">11 repeat filers · St. Francis filed 3 times</div></div>
+      </div>
+      <button class="btn primary" id="merge" type="button" style="margin-top:12px">Merge duplicate filings</button>
+    </div>
+  </aside>
+  <div class="panel">
+    <div class="controls">
+      <label>X axis <select id="xSel"></select></label>
+      <label>Y axis <select id="ySel"></select></label>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="chart" id="chart"></div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Source: <code>46hospitaldata.xlsx</code> (444 reports × 12,477 columns), parsed to <code>data/core.pkl</code> by the project scripts. Reports without the needed balance-sheet or income fields are left out of that view, never treated as zero. Unique-facility counts follow one rule: a facility that changed ownership mid-year counts under the type it held longer.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/hospitals.js"></script>
+<script>
+(() => {
+  const K = Kit, R = window.MODEL_DATA.reports, f = K.fmt;
+  const GROUPS = [['Non-profit', 'var(--series-1)'], ['Investor', 'var(--series-2)'], ['Government', 'var(--series-3)']];
+  const COL = Object.fromEntries(GROUPS);
+  const M = {
+    mix: { label: 'Medicare + Medi-Cal share of revenue', short: 'Payer mix', scale: 'lin', dom: [0, 1], fmt: f.pct0, tick: v => Math.round(v * 100) + '%', ticks: [0, .25, .5, .75, 1] },
+    margin: { label: 'Operating margin (net income ÷ revenue)', short: 'Margin', scale: 'lin', dom: [-0.6, 0.6], fmt: f.pct0, tick: v => Math.round(v * 100) + '%', ticks: [-.6, -.3, 0, .3, .6] },
+    debt: { label: 'Debt ratio (liabilities ÷ assets, log scale)', short: 'Debt ratio', scale: 'log', dom: [0.02, 10], fmt: v => v == null ? '–' : v.toFixed(2), ticks: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10] },
+    npr: { label: 'Net patient revenue (log scale)', short: 'Revenue', scale: 'log', dom: [1e6, 2e10], fmt: f.money, tick: v => v >= 1e9 ? '$' + v / 1e9 + 'B' : '$' + v / 1e6 + 'M', ticks: [1e6, 1e7, 1e8, 1e9, 1e10] },
+  };
+  let xk = 'mix', yk = 'margin', merged = false, focus = null, shownGroups = new Set(GROUPS.map(g => g[0]));
+  // primary report per facility = the longest period (tie-break rule)
+  const primary = {}; R.forEach((r, i) => { if (!(r.fac in primary) || r.days > R[primary[r.fac]].days) primary[r.fac] = i; });
+
+  const sels = ['xSel', 'ySel'].map((id, k) => { const s = document.getElementById(id); Object.entries(M).forEach(([key, m]) => K.html('option', { value: key, text: m.short }, s)); s.value = k ? yk : xk; return s; });
+  sels.forEach(s => s.addEventListener('change', () => { focus = null; setAxes(sels[0].value, sels[1].value); }));
+
+  const lg = document.getElementById('legend');
+  GROUPS.forEach(([g, c]) => {
+    const b = K.html('button', { type: 'button' }, lg); b.setAttribute('aria-pressed', 'true');
+    K.html('i', { className: 'key-dot', style: `background:${c}` }, b); b.appendChild(document.createTextNode(g));
+    b.addEventListener('click', () => { shownGroups.has(g) ? shownGroups.delete(g) : shownGroups.add(g); b.setAttribute('aria-pressed', shownGroups.has(g)); paint(); });
+  });
+  K.html('span', { text: 'Click a group to hide it', style: 'color:var(--text-muted)' }, lg);
+
+  const box = document.getElementById('chart');
+  let geom, dots = [], cur = R.map(() => ({ x: 0, y: 0, o: 0 })), cancel = () => {}, gLinks, gLabels, svg;
+  const proj = (key, v, a, b) => {
+    const m = M[key]; if (v == null || (m.scale === 'log' && v <= 0)) return null;
+    const t = m.scale === 'log' ? (Math.log10(v) - Math.log10(m.dom[0])) / (Math.log10(m.dom[1]) - Math.log10(m.dom[0])) : (v - m.dom[0]) / (m.dom[1] - m.dom[0]);
+    return { p: a + K.clamp(t, 0, 1) * (b - a), pinned: t < 0 || t > 1 };
+  };
+  function build() {
+    box.replaceChildren();
+    const W = box.clientWidth || 780, H = Math.max(440, Math.min(580, W * 0.68)), m = { l: 58, r: 14, t: 12, b: 44 };
+    svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Scatter of hospital financial reports' }, box);
+    geom = { W, H, m, gAxes: K.el('g', {}, svg) };
+    gLinks = K.el('g', {}, svg);
+    const gDots = K.el('g', {}, svg); gLabels = K.el('g', {}, svg);
+    dots = R.map((r, i) => {
+      const c = K.el('circle', { r: 4.5 }, gDots);
+      return c;
+    });
+    const hit = K.el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', e => {
+      const b = svg.getBoundingClientRect(), px = e.clientX - b.left, py = e.clientY - b.top;
+      let best = 22 ** 2, k = -1;
+      cur.forEach((q, i) => { if (q.o < 0.5) return; const d = (q.x - px) ** 2 + (q.y - py) ** 2; if (d < best) { best = d; k = i; } });
+      if (k < 0) return K.hideTip();
+      const r = R[k];
+      K.tip(e, `${r.name} · ${r.city}`, [
+        { value: r.ctrl, name: r.ctrlRaw.replace(/_/g, ' '), color: COL[r.ctrl] },
+        { value: M.debt.fmt(r.debt), name: 'debt ratio' }, { value: f.pct0(r.margin), name: 'operating margin' },
+        { value: f.pct0(r.mix), name: 'payer mix' }, { value: f.money(r.npr), name: 'net patient revenue' },
+        { value: r.days + ' days', name: r.dup ? 'reporting period · repeat filer' : 'reporting period' }]);
+    });
+    hit.addEventListener('pointerleave', K.hideTip);
+    axes(); paint(true);
+  }
+  function axes() {
+    const { W, H, m, gAxes } = geom; gAxes.replaceChildren();
+    M[yk].ticks.forEach(v => { const y = proj(yk, v, H - m.b, m.t).p; K.el('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, style: 'stroke:var(--grid)' }, gAxes); K.txt(gAxes, m.l - 6, y + 4, (M[yk].tick || M[yk].fmt)(v), { 'text-anchor': 'end', class: 'muted' }); });
+    M[xk].ticks.forEach(v => { const x = proj(xk, v, m.l, W - m.r).p; K.el('line', { x1: x, x2: x, y1: m.t, y2: H - m.b, style: 'stroke:var(--grid)' }, gAxes); K.txt(gAxes, x, H - m.b + 16, (M[xk].tick || M[xk].fmt)(v), { 'text-anchor': 'middle', class: 'muted' }); });
+    if (yk === 'margin') { const y = proj('margin', 0, H - m.b, m.t).p; K.el('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, style: 'stroke:var(--axis);stroke-width:1.5' }, gAxes); }
+    K.txt(gAxes, (m.l + W - m.r) / 2, H - 6, M[xk].label, { 'text-anchor': 'middle' });
+    K.txt(gAxes, m.l + 6, m.t + 12, M[yk].label, { class: 'muted' });
+  }
+  // target state for every dot
+  function targets() {
+    const { W, H, m } = geom;
+    return R.map((r, i) => {
+      const src = merged ? R[primary[r.fac]] : r;
+      const x = proj(xk, src[xk], m.l, W - m.r), y = proj(yk, src[yk], H - m.b, m.t);
+      let o = x && y && shownGroups.has(r.ctrl) ? 1 : 0;
+      if (merged && primary[r.fac] !== i) o = 0;
+      return { x: x ? x.p : cur[i].x, y: y ? y.p : cur[i].y, o, pinned: (x && x.pinned) || (y && y.pinned) };
+    });
+  }
+  function paint(instant) {
+    const T = targets(), from = cur.map(q => ({ ...q }));
+    cancel();
+    const apply = t => {
+      cur = T.map((q, i) => ({ x: K.lerp(from[i].x, q.x, t), y: K.lerp(from[i].y, q.y, t), o: K.lerp(from[i].o, q.o, t) }));
+      cur.forEach((q, i) => {
+        const r = R[i], c = dots[i], hl = focus && focus.ids.includes(i), dim = focus && focus.dim && !hl && !focus.dim(r);
+        c.setAttribute('cx', q.x); c.setAttribute('cy', q.y); c.setAttribute('r', hl ? 7 : 4.5);
+        c.style.fill = T[i].pinned ? 'var(--surface-1)' : COL[r.ctrl];
+        c.style.stroke = T[i].pinned ? COL[r.ctrl] : hl ? 'var(--text-primary)' : 'var(--surface-1)';
+        c.style.strokeWidth = hl ? 2.5 : T[i].pinned ? 1.5 : 1.5;
+        c.style.opacity = q.o * (dim ? 0.12 : focus && focus.ids.length && !hl && !focus.dim ? 0.3 : 0.85);
+      });
+      drawLinks(); drawLabels();
+    };
+    if (instant) { apply(1); return; }
+    cancel = K.animate(700, apply);
+    const shown = T.filter(q => q.o > 0).length;
+    animateCount(shown);
+  }
+  let countShown = 444, countCancel = () => {};
+  function animateCount(target) {
+    countCancel(); const from = countShown;
+    countCancel = K.animate(700, t => { countShown = Math.round(K.lerp(from, target, t)); document.getElementById('cDots').textContent = countShown; });
+    document.getElementById('cDotsNote').textContent = merged ? 'one per hospital, in this view' : 'filed reports in this view';
+  }
+  function drawLinks() {
+    gLinks.replaceChildren();
+    if (!focus || !focus.links || merged) return;
+    const by = {}; R.forEach((r, i) => { if (r.dup) (by[r.fac] = by[r.fac] || []).push(i); });
+    Object.values(by).forEach(ids => { for (let k = 1; k < ids.length; k++) {
+      const a = cur[ids[0]], b = cur[ids[k]]; if (a.o < .5 || b.o < .5) continue;
+      K.el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, style: 'stroke:var(--text-primary);stroke-width:1.2;opacity:.6' }, gLinks);
+    } });
+  }
+  function drawLabels() {
+    gLabels.replaceChildren();
+    if (!focus || !focus.label) return;
+    focus.label.forEach(i => { const q = cur[i]; if (q.o < .5) return;
+      K.txt(gLabels, q.x + 10, q.y - 8, R[i].name, { class: 'val', style: 'paint-order:stroke;stroke:var(--surface-1);stroke-width:3px', 'text-anchor': q.x > geom.W * 0.7 ? 'end' : 'start', dx: q.x > geom.W * 0.7 ? -20 : 0 }); });
+  }
+  function setAxes(x, y) { xk = x; yk = y; sels[0].value = x; sels[1].value = y; axes(); paint(); }
+
+  // ---- guided tour ----
+  const idx = name => R.findIndex(r => r.name === name);
+  const unique = rs => new Set(rs.map(r => r.fac)).size;
+  const TOUR = [
+    ['Highest debt ratio', () => { const i = R.reduce((b, r, k) => (r.debt ?? 0) > (R[b].debt ?? 0) ? k : b, 0);
+      return { x: 'debt', y: 'margin', ids: [i], label: [i], html: [M.debt.fmt(R[i].debt), `${R[i].name}: $3.35M of liabilities against $0.55M of assets. Strictly this is a debt-to-asset ratio, though it is often labelled debt-to-income.`] }; }],
+    ['Hospitals operating at a loss', () => { const loss = R.filter(r => r.netinc != null && r.netinc < 0);
+      return { x: 'mix', y: 'margin', ids: [], dim: r => r.netinc != null && r.netinc < 0, html: [`${unique(loss)} hospitals`, `${loss.length} filed reports show a loss, but ${loss.length - unique(loss)} come from hospitals that filed twice. Counting rows would overstate it.`] }; }],
+    ['Highest Medicare + Medi-Cal mix', () => { const a = idx('Newport Bay Hospital'), b = idx('Laguna Honda Hospital And Rehabilitation Center');
+      return { x: 'mix', y: 'npr', ids: [a, b], label: [a, b], html: [(100 * R[a].mix).toFixed(4) + '%', `Newport Bay edges out Laguna Honda (${(100 * R[b].mix).toFixed(4)}%), a near-tie. Laguna Honda is 17× larger by revenue, so it is the more meaningful answer for an executive.`] }; }],
+    ['How many non-profits?', () => { const np = Object.values(primary).map(i => R[i]).filter(r => r.ctrl === 'Non-profit');
+      return { x: 'debt', y: 'npr', ids: [], dim: r => r.ctrl === 'Non-profit', html: [`${np.length} hospitals`, `233 rows are non-profit filings, but they collapse to ${np.length} facilities once repeat filers are merged and two mid-year ownership changes go to the longer-held type.`] }; }],
+    ['Repeat filers', () => { const ids = R.map((r, i) => r.dup ? i : -1).filter(i => i >= 0);
+      return { x: 'debt', y: 'margin', ids, links: true, html: [`${unique(ids.map(i => R[i]))} hospitals, ${ids.length} reports`, 'Lines join reports from the same hospital. Fiscal-year changes split one year into two periods (USC Norris: 366 + 184 days), so these are intended, not errors. Try “Merge duplicate filings”.'] }; }],
+    ['Explore freely', () => ({ x: 'mix', y: 'margin', ids: [], html: ['Your turn', 'Choose any axes. Hover a dot for the hospital and its numbers. Hollow dots are pinned at the edge of the scale.'] })],
+  ];
+  const tourBox = document.getElementById('tour'), ans = document.getElementById('answer');
+  TOUR.forEach(([label, fn], k) => {
+    const b = K.html('button', { className: 'btn', type: 'button', text: label }, tourBox);
+    b.addEventListener('click', () => {
+      tourBox.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      const s = fn(); focus = s.ids.length || s.dim || s.links ? s : null;
+      ans.replaceChildren(); K.html('b', { className: 'big', text: s.html[0] }, ans); ans.appendChild(document.createTextNode(s.html[1]));
+      if (s.x !== xk || s.y !== yk) setAxes(s.x, s.y); else paint();
+    });
+  });
+
+  document.getElementById('merge').addEventListener('click', e => {
+    merged = !merged; e.target.textContent = merged ? 'Split back into reports' : 'Merge duplicate filings'; paint();
+  });
+
+  build(); animateCount(targets().filter(q => q.o > 0).length);
+  const q = K.param('q'); if (q !== null) tourBox.querySelectorAll('button')[+q].click();
+  if (K.param('merge') !== null) document.getElementById('merge').click();
+  K.onResize(build);
+  K.themeToggle(document.getElementById('theme'));
+})();
+</script>
+</body>
+</html>

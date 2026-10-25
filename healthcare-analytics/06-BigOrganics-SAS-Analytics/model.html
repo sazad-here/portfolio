@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BigOrganics · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .node rect { stroke-width: 2; transition: stroke .2s, opacity .2s; }
+  .node { cursor: pointer; }
+  .link { fill: none; transition: opacity .2s; }
+  .leafrow { display: grid; grid-template-columns: minmax(0,1fr) 200px 52px; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 4px; border-radius: 6px; cursor: pointer; }
+  .leafrow:hover, .leafrow.on { background: var(--accent-wash); }
+  .leafrow .bar { height: 10px; border-radius: 0 3px 3px 0; background: var(--series-1); }
+  .leafrow .n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .verdict { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#organics">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · SAS Visual Statistics decision tree</div>
+  <h1>🛒 Who Buys Organic? The Decision Tree, Live</h1>
+  <p class="lede">This is the actual tree SAS grew on 111,115 BigOrganics loyalty customers, decoded from the exported SAS report. Dots stream through it like customers: each one is a shopper, coloured if they bought organics. Build a customer on the left to watch their path light up.</p>
+  <p class="how">Branch width = number of customers · box colour = share who bought organics (darker = more likely) · Overall purchase rate 24.8% · Model KS = 0.4707.</p>
+</header>
+
+<div style="margin:18px 0">
+  <div class="panel">
+    <div class="controls">
+      <button class="btn primary" id="flow" type="button">❚❚ Pause flow</button>
+      <span class="legend" style="margin:0"><span><i class="key-dot" style="background:var(--series-2)"></i>Bought organics</span><span><i class="key-dot" style="background:var(--text-muted)"></i>Did not</span></span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)">0%<span class="ramp" id="ramp" style="width:120px"></span>92%</span>
+    </div>
+    <div class="chart scroll-x" id="tree"></div>
+  </div>
+</div>
+<div class="layout" style="grid-template-columns: 340px 1fr">
+  <div class="panel">
+      <h2>Build a customer</h2>
+      <div class="slider"><span class="name">Age</span><span class="value" id="ageV"></span><input type="range" id="age" min="18" max="79" value="38" aria-label="Age"></div>
+      <label style="font-size:13px;color:var(--text-secondary)"><input type="checkbox" id="ageMiss"> Age missing</label>
+      <div class="slider"><span class="name">Affluence grade</span><span class="value" id="affV"></span><input type="range" id="aff" min="0" max="34" value="16" aria-label="Affluence grade"></div>
+      <label style="font-size:13px;color:var(--text-secondary)"><input type="checkbox" id="affMiss"> Affluence missing</label>
+      <div class="controls" style="margin-top:12px">
+        <label>Gender <select id="gender"><option>F</option><option>M</option><option>U</option><option value="Missing">Missing</option></select></label>
+        <label>Neighbourhood <select id="cluster"></select></label>
+      </div>
+      <div class="stat" style="margin-top:10px">
+        <div class="label">Predicted chance of buying organics</div>
+        <div class="hero-num" id="prob">–</div>
+        <div class="note" id="lift"></div>
+      </div>
+      <div class="verdict" id="path"></div>
+    </div>
+  <div class="panel">
+      <h2>All 14 segments</h2>
+      <div class="sub">Leaves ranked by purchase rate · click to trace</div>
+      <div id="leaves"></div>
+    </div>
+</div>
+<div class="panel">
+  <h2>Reading the tree</h2>
+  <ul class="notes">
+    <li><b>Age is the first split:</b> under-45s buy at 52.2%, everyone else at 15.8%.</li>
+    <li><b>Affluence comes next on both sides.</b> The best segment, under 45 with affluence ≥ 15, buys at <b>91.7%</b> (2,390 of 2,605).</li>
+    <li><b>The largest segment is the least likely:</b> 64,885 customers aged 45+ with low or missing affluence buy at 11.0%.</li>
+    <li>Gender matters inside segments: wherever the tree separates women from others, women buy more often (53.6% vs 23.9%, 75.8% vs 49.6%, 43.4% vs 17.7%).</li>
+  </ul>
+</div>
+</main>
+<footer class="wrap">Source: the exported SAS Visual Analytics report package. Node table <code>dd618.csv</code>, class counts <code>dd619.csv</code> and labels <code>dd618index.csv</code>, decoded by <code>tools/build_models.py</code>. Every count is SAS output; nothing is estimated.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/bigorganics.js"></script>
+<script>
+(() => {
+  const K = Kit, D = window.MODEL_DATA;
+  const byId = {}; D.nodes.forEach(n => { byId[n.id] = { ...n, kids: [] }; });
+  Object.values(byId).forEach(n => { if (n.parent >= 0) byId[n.parent].kids.push(n); });
+  const root = byId[0], leaves = Object.values(byId).filter(n => n.leaf);
+  const rate = n => n.buy / n.n, MAXR = Math.max(...leaves.map(rate));
+  const VARS = { 'Age': 'age', 'Affluence Grade': 'aff', 'Gender': 'gender', 'Neighborhood Cluster-55 Level': 'cluster' };
+  const short = s => s.length > 22 ? (s.split(', ').length > 3 ? s.split(', ').length - (s.includes('Missing') ? 1 : 0) + ' clusters' + (s.includes('Missing') ? ' + missing' : '') : s.slice(0, 21) + '…') : s;
+  const varOf = n => n.parent >= 0 ? byId[n.parent].split : null;
+  const ABBR = { 'Affluence Grade': 'Affluence', 'Neighborhood Cluster-55 Level': 'Nbhd', Gender: 'Gender', Age: 'Age' };
+  const ruleText = n => `${ABBR[varOf(n)]} ${/^[<≥]/.test(n.branch) ? '' : '= '}${short(n.branch).replace(/,? or Missing/, ' / missing')}`;
+
+  // does value x satisfy branch label? (labels decoded from SAS, e.g. "< 45", "≥ 8 or Missing", "M, U, or Missing")
+  const matches = (label, x) => {
+    const missingOk = /Missing/.test(label);
+    if (x == null || x === 'Missing') return missingOk;
+    const m = label.match(/^([<≥])\s*([\d.]+)/);
+    if (m) return m[1] === '<' ? x < +m[2] : x >= +m[2];
+    return label.replace(/,? or /g, ', ').split(', ').map(s => s.trim()).includes(String(x));
+  };
+
+  // ---- layout: root left, leaves stacked; internal nodes centred on their children ----
+  let order = 0; const place = n => { if (!n.kids.length) { n.row = order++; } else { n.kids.forEach(place); n.row = n.kids.reduce((a, k) => a + k.row, 0) / n.kids.length; } };
+  place(root);
+
+  const box = document.getElementById('tree');
+  let svg, gLinks, gParts, geo = {}, linkEls = {}, nodeEls = {}, active = new Set();
+  const nodeW = 158, nodeH = 40, maxLevel = Math.max(...D.nodes.map(n => n.level));
+  function build() {
+    box.replaceChildren(); geo = {}; linkEls = {}; nodeEls = {};
+    const W = Math.max(760, box.clientWidth || 860), rowH = 50, H = order * rowH + 10;
+    const colW = (W - nodeW) / maxLevel;
+    svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'BigOrganics decision tree' }, box);
+    Object.values(byId).forEach(n => geo[n.id] = { x: n.level * colW, y: 6 + n.row * rowH, cy: 6 + n.row * rowH + nodeH / 2 });
+    gLinks = K.el('g', {}, svg); gParts = K.el('g', {}, svg); const gNodes = K.el('g', {}, svg);
+    const maxN = root.n;
+    Object.values(byId).forEach(n => {
+      if (n.parent < 0) return;
+      const a = geo[n.parent], b = geo[n.id], x1 = a.x + nodeW, x2 = b.x, mx = (x1 + x2) / 2;
+      const d = `M${x1},${a.cy} C${mx},${a.cy} ${mx},${b.cy} ${x2},${b.cy}`;
+      const p = K.el('path', { d, class: 'link', style: `stroke:var(--axis);stroke-width:${Math.max(1.5, 22 * n.n / maxN)};opacity:.55` }, gLinks);
+      linkEls[n.id] = p;
+    });
+    Object.values(byId).forEach(n => {
+      const g = K.el('g', { class: 'node', tabindex: 0, transform: `translate(${geo[n.id].x},${geo[n.id].y})` }, gNodes);
+      const u = rate(n) / MAXR;
+      const rect = K.el('rect', { width: nodeW, height: nodeH, rx: 8, style: `fill:${K.seq(u)};stroke:transparent` }, g);
+      const ink = K.seqTextColor(u);
+      K.txt(g, 8, 16, n.parent < 0 ? 'All customers' : ruleText(n), { style: `fill:${ink};font-size:11px;font-weight:600` });
+      K.txt(g, 8, 32, `${(100 * rate(n)).toFixed(1)}% buy · n=${n.n.toLocaleString()}`, { style: `fill:${ink};font-size:11px` });
+      g.addEventListener('pointermove', e => K.tip(e, n.parent < 0 ? 'All customers' : `${varOf(n)}: ${n.branch}`, [
+        { value: (100 * rate(n)).toFixed(1) + '%', name: 'bought organics' }, { value: n.buy.toLocaleString(), name: 'buyers' },
+        { value: n.n.toLocaleString(), name: 'customers' }, ...(n.leaf ? [] : [{ value: n.split, name: 'splits next on' }])]));
+      g.addEventListener('pointerleave', K.hideTip);
+      g.addEventListener('click', () => { if (n.leaf) trace(n); });
+      nodeEls[n.id] = rect;
+    });
+    paintActive();
+  }
+  const pathTo = n => { const p = []; while (n) { p.unshift(n); n = n.parent >= 0 ? byId[n.parent] : null; } return p; };
+  function paintActive() {
+    Object.entries(linkEls).forEach(([id, p]) => {
+      const on = active.has(+id);
+      p.style.stroke = on ? 'var(--text-primary)' : 'var(--axis)'; p.style.opacity = active.size && !on ? 0.25 : 0.6;
+    });
+    Object.entries(nodeEls).forEach(([id, r]) => { r.style.stroke = active.has(+id) ? 'var(--text-primary)' : 'transparent'; });
+    document.querySelectorAll('.leafrow').forEach(el => el.classList.toggle('on', active.has(+el.dataset.id)));
+  }
+
+  // ---- customer builder ----
+  const cl = document.getElementById('cluster');
+  K.html('option', { value: 'Missing', text: 'Missing' }, cl);
+  for (let i = 1; i <= 55; i++) K.html('option', { value: String(i).padStart(2, '0'), text: 'Cluster ' + String(i).padStart(2, '0') }, cl);
+  cl.value = '02';
+  const ui = { age: document.getElementById('age'), aff: document.getElementById('aff'), gender: document.getElementById('gender'), ageMiss: document.getElementById('ageMiss'), affMiss: document.getElementById('affMiss') };
+  function customer() {
+    return { age: ui.ageMiss.checked ? null : +ui.age.value, aff: ui.affMiss.checked ? null : +ui.aff.value, gender: ui.gender.value, cluster: cl.value };
+  }
+  function route() {
+    const c = customer();
+    document.getElementById('ageV').textContent = c.age ?? 'missing';
+    document.getElementById('affV').textContent = c.aff ?? 'missing';
+    let n = root;
+    while (n.kids.length) { const v = c[VARS[n.split]]; n = n.kids.find(k => matches(k.branch, v)) || n.kids[n.kids.length - 1]; }
+    trace(n, true);
+  }
+  let probAnim = () => {}, shownProb = 0;
+  function trace(leaf, fromBuilder) {
+    const p = pathTo(leaf); active = new Set(p.map(n => n.id)); paintActive();
+    const target = 100 * rate(leaf);
+    probAnim(); const from = shownProb;
+    probAnim = K.animate(500, t => { shownProb = K.lerp(from, target, t); document.getElementById('prob').textContent = shownProb.toFixed(1) + '%'; });
+    const lift = rate(leaf) / rate(root);
+    document.getElementById('lift').textContent = `${lift.toFixed(2)}× the 24.8% average · segment of ${leaf.n.toLocaleString()} customers`;
+    document.getElementById('path').textContent = (fromBuilder ? 'Path: ' : 'Segment: ') + p.slice(1).map(n => `${varOf(n)} ${n.branch.length > 30 ? short(n.branch) : n.branch}`).join(' → ');
+  }
+  ['input', 'change'].forEach(ev => Object.values(ui).concat([cl]).forEach(el => el.addEventListener(ev, route)));
+
+  // ---- leaf ranking ----
+  const LB = document.getElementById('leaves');
+  [...leaves].sort((a, b) => rate(b) - rate(a)).forEach(l => {
+    const row = K.html('div', { className: 'leafrow' }, LB); row.dataset.id = l.id;
+    K.html('span', { text: pathTo(l).slice(1).map(n => ({ 'Affluence Grade': 'Affl', 'Neighborhood Cluster-55 Level': 'Nbhd', Gender: 'Sex', Age: 'Age' })[varOf(n)] + ' ' + short(n.branch).replace(/,? or Missing/, '*')).join(' · ') }, row);
+    const track = K.html('span', { style: 'background:var(--surface-2);border-radius:3px;height:10px;display:block' }, row);
+    K.html('span', { className: 'bar', style: `width:${100 * rate(l)}%;display:block` }, track);
+    K.html('span', { className: 'n', text: (100 * rate(l)).toFixed(1) + '%' }, row);
+    row.addEventListener('click', () => trace(l));
+  });
+  K.html('div', { className: 'sub', text: '* includes missing values', style: 'margin-top:6px' }, LB);
+
+  // ---- particle flow: each dot is a sampled customer, routed to a leaf in proportion to its size ----
+  let running = !K.reduced, parts = [], last = 0, acc = 0;
+  const cum = []; let tot = 0; leaves.forEach(l => { tot += l.n; cum.push([tot, l]); });
+  const spawn = () => {
+    const r = Math.random() * tot, leaf = cum.find(c => c[0] >= r)[1];
+    const p = pathTo(leaf), buyer = Math.random() < rate(leaf);
+    const el = K.el('circle', { r: 3, style: `fill:${buyer ? 'var(--series-2)' : 'var(--text-muted)'}` }, gParts);
+    parts.push({ el, p, seg: 1, t: 0, jitter: (Math.random() - 0.5) * 8 });
+  };
+  const frame = now => {
+    if (!running) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt * 14;
+    while (acc > 1) { spawn(); acc--; }
+    parts = parts.filter(q => {
+      q.t += dt * 1.1;
+      if (q.t >= 1) { q.seg++; q.t = 0; }
+      if (q.seg >= q.p.length) { q.el.remove(); return false; }
+      const link = linkEls[q.p[q.seg].id], L = link.getTotalLength(), pt = link.getPointAtLength(q.t * L);
+      q.el.setAttribute('cx', pt.x); q.el.setAttribute('cy', pt.y + q.jitter * Math.sin(Math.PI * q.t));
+      return true;
+    });
+    requestAnimationFrame(frame);
+  };
+  const btn = document.getElementById('flow');
+  const setRun = on => { running = on; btn.textContent = on ? '❚❚ Pause flow' : '▶ Play flow'; if (on) { last = performance.now(); requestAnimationFrame(frame); } };
+  btn.addEventListener('click', () => setRun(!running));
+
+  document.getElementById('ramp').style.background = K.rampCss();
+  build(); route(); setRun(running);
+  K.onResize(() => { parts.forEach(q => q.el.remove()); parts = []; build(); });
+  K.themeToggle(document.getElementById('theme'), () => { parts.forEach(q => q.el.remove()); parts = []; build(); document.getElementById('ramp').style.background = K.rampCss(); });
+})();
+</script>
+</body>
+</html>

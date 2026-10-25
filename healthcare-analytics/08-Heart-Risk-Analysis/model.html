@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Framingham Heart Risk · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .node rect { transition: stroke .25s, opacity .25s; }
+  .clusters-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 900px) { .clusters-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#heart">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · SAS Visual Statistics on the Framingham HEART sample</div>
+  <h1>❤️ Follow a Patient Down the Risk Tree</h1>
+  <p class="lede">Set a patient's blood pressure, cholesterol, smoking and weight. A marker walks them down the decision tree SAS fitted on 5,209 Framingham patients, and the chart shows how the share of deaths from coronary heart disease (CHD) builds at each split.</p>
+  <p class="how">The tree shows the share of each group's deaths by cause. 61.8% of patients were still alive when the study ended, so read the numbers as relative risk between groups, not as an individual's chance of dying.</p>
+</header>
+
+<div class="layout">
+  <aside class="panel">
+    <h2>Patient</h2>
+    <div class="controls" style="margin-top:8px">
+      <span style="font-size:13px;color:var(--text-secondary)">Blood pressure</span>
+      <div class="seg" role="group" aria-label="Blood pressure status"><button type="button" data-bp="N" class="on">Normal / optimal</button><button type="button" data-bp="H">High</button></div>
+    </div>
+    <div class="slider"><span class="name">Cholesterol (mg/dL)</span><span class="value" id="cholV"></span><input type="range" id="chol" min="100" max="400" value="240" aria-label="Cholesterol"></div>
+    <div class="slider"><span class="name">Cigarettes per day</span><span class="value" id="smokeV"></span><input type="range" id="smoke" min="0" max="60" value="30" aria-label="Cigarettes per day"></div>
+    <div class="slider"><span class="name">Weight (lb)</span><span class="value" id="wtV"></span><input type="range" id="wt" min="80" max="300" value="210" aria-label="Weight"></div>
+    <div class="controls"><button class="btn" id="worst" type="button">Riskiest profile</button><button class="btn" id="best" type="button">Healthiest</button></div>
+    <div class="stat" style="margin-top:10px">
+      <div class="label">Share of deaths from CHD in this group</div>
+      <div class="hero-num" id="chd">–</div>
+      <div class="note" id="mult"></div>
+    </div>
+    <p class="how" id="stopNote"></p>
+  </aside>
+  <div class="stack">
+    <div class="panel">
+      <h2>The tree</h2>
+      <div class="sub">Box colour = CHD share (darker = higher) · splits in the order SAS chose them</div>
+      <div class="chart scroll-x" id="tree"></div>
+    </div>
+    <div class="panel">
+      <h2>CHD share along this patient's path</h2>
+      <div class="sub">Each bar is one step down the tree</div>
+      <div class="chart" id="path"></div>
+    </div>
+  </div>
+</div>
+
+<div class="clusters-grid">
+  <div class="panel">
+    <h2>Three patient profiles (k-means, k = 3)</h2>
+    <div class="sub">Cluster centroids on four variables · each axis runs from the lowest to the highest centroid · dashed tick = overall average · hover any point for its value</div>
+    <div id="clLegend"></div>
+    <div class="chart" id="pc"></div>
+    <button class="btn" id="replay" type="button">↻ Replay</button>
+  </div>
+  <div class="panel">
+    <h2>What costs the most years?</h2>
+    <div class="sub">Average age at death compared with the low-risk cluster (74.4 yrs)</div>
+    <div class="chart" id="years"></div>
+    <ul class="notes">
+      <li><b>Heavy smokers</b> (25.4 cigarettes/day) die about <b>10.4 years</b> earlier.</li>
+      <li><b>Hypertensive patients</b> (183 mmHg, 259 mg/dL) die about <b>1.6 years</b> earlier.</li>
+      <li>Age at death is only recorded for patients who died, so these are conditional averages.</li>
+    </ul>
+  </div>
+</div>
+</main>
+<footer class="wrap">Source: the SAS Visual Statistics analysis (cluster centroids, node rules, node statistics and variable importance panels for the HEART table in SAS Viya for Learners). Only the splits in the fitted tree are drawn; the normal-BP branch was not split further.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/heart.js"></script>
+<script>
+(() => {
+  const K = Kit, D = window.MODEL_DATA;
+  const N = Object.fromEntries(D.tree.map(n => [n.id, { ...n, kids: [] }]));
+  D.tree.forEach(n => { if (n.parent) N[n.parent].kids.push(N[n.id]); });
+  const MAXCHD = 56;
+  let bp = 'N';
+  const ui = { chol: document.getElementById('chol'), smoke: document.getElementById('smoke'), wt: document.getElementById('wt') };
+  document.querySelectorAll('[data-bp]').forEach(b => b.addEventListener('click', () => setBp(b.dataset.bp)));
+  const setBp = v => { bp = v; document.querySelectorAll('[data-bp]').forEach(x => x.classList.toggle('on', x.dataset.bp === v)); route(); };
+  Object.values(ui).forEach(el => el.addEventListener('input', route));
+  document.getElementById('worst').addEventListener('click', () => { ui.chol.value = 280; ui.smoke.value = 40; ui.wt.value = 230; setBp('H'); });
+  document.getElementById('best').addEventListener('click', () => { ui.chol.value = 190; ui.smoke.value = 0; ui.wt.value = 150; setBp('N'); });
+
+  const walk = () => {
+    const c = +ui.chol.value, s = +ui.smoke.value, w = +ui.wt.value, p = [N.root];
+    if (bp === 'N') { p.push(N.bpN); return p; }
+    p.push(N.bpH);
+    if (c < 225) { p.push(N.chL); return p; }
+    p.push(N.chH);
+    if (s < 25) { p.push(N.smL); return p; }
+    p.push(N.smH);
+    p.push(w < 200 ? N.wtL : N.wtH); return p;
+  };
+
+  // ---- tree diagram (root left) ----
+  const LV = { root: 0, bpN: 1, bpH: 1, chL: 2, chH: 2, smL: 3, smH: 3, wtL: 4, wtH: 4 };
+  const ROW = { root: 2.2, bpN: 0.4, bpH: 3.4, chL: 2.2, chH: 4.4, smL: 3.4, smH: 5.4, wtL: 4.6, wtH: 6.2 };
+  const tbox = document.getElementById('tree'); let G = {}, nodeEls = {}, linkEls = {}, token, tsvg;
+  const nw = 132, nh = 44;
+  function buildTree() {
+    tbox.replaceChildren(); G = {}; nodeEls = {}; linkEls = {};
+    const W = Math.max(620, tbox.clientWidth || 760), rowH = 46, H = 7 * rowH + 8, colW = (W - nw) / 4;
+    tsvg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Decision tree for cause of death' }, tbox);
+    Object.keys(N).forEach(id => G[id] = { x: LV[id] * colW, y: ROW[id] * rowH, cy: ROW[id] * rowH + nh / 2 });
+    const gl = K.el('g', {}, tsvg);
+    Object.values(N).forEach(n => { if (!n.parent) return;
+      const a = G[n.parent], b = G[n.id], x1 = a.x + nw, x2 = b.x, mx = (x1 + x2) / 2;
+      linkEls[n.id] = K.el('path', { d: `M${x1},${a.cy} C${mx},${a.cy} ${mx},${b.cy} ${x2},${b.cy}`, fill: 'none', style: `stroke:var(--axis);stroke-width:${Math.max(1.5, 16 * n.n / 5209)}` }, gl);
+    });
+    Object.values(N).forEach(n => {
+      const g = K.el('g', { class: 'node', transform: `translate(${G[n.id].x},${G[n.id].y})` }, tsvg);
+      const u = n.chd == null ? 0.1 : n.chd / MAXCHD;
+      const r = K.el('rect', { width: nw, height: nh, rx: 8, style: `fill:${K.seq(u)};stroke:transparent;stroke-width:2.5` }, g);
+      const ink = K.seqTextColor(u);
+      K.txt(g, 8, 17, n.rule || 'All patients', { style: `fill:${ink};font-size:11px;font-weight:600` });
+      K.txt(g, 8, 33, n.chd == null ? `n = ${n.n.toLocaleString()}` : `CHD ${n.chd.toFixed(1)}% · n=${n.n.toLocaleString()}`, { style: `fill:${ink};font-size:11px` });
+      g.addEventListener('pointermove', e => K.tip(e, n.rule || 'All patients', [
+        ...(n.chd != null ? [{ value: n.chd.toFixed(2) + '%', name: 'of deaths from CHD' }] : []),
+        ...(n.cancer != null ? [{ value: n.cancer.toFixed(2) + '%', name: 'from cancer' }] : []),
+        ...(n.stroke != null ? [{ value: n.stroke.toFixed(2) + '%', name: 'from cerebrovascular disease' }] : []),
+        { value: n.n.toLocaleString(), name: 'patients' }]));
+      g.addEventListener('pointerleave', K.hideTip);
+      nodeEls[n.id] = r;
+    });
+    token = K.el('circle', { r: 7, style: 'fill:var(--series-2);stroke:var(--surface-1);stroke-width:2.5' }, tsvg);
+    token.setAttribute('cx', G.root.x + nw); token.setAttribute('cy', G.root.cy);
+  }
+
+  // ---- path bars ----
+  const pbox = document.getElementById('path');
+  function drawPath(steps, grow) {
+    pbox.replaceChildren();
+    const W = pbox.clientWidth || 700, H = 210, m = { l: 36, r: 8, t: 22, b: 40 };
+    const svg = K.el('svg', { width: W, height: H, role: 'img' }, pbox);
+    const sy = v => m.t + (1 - v / 60) * (H - m.t - m.b);
+    [0, 20, 40, 60].forEach(v => { K.el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg); K.txt(svg, m.l - 6, sy(v) + 4, v + '%', { 'text-anchor': 'end', class: 'muted' }); });
+    const band = (W - m.l - m.r) / 4, bw = Math.min(56, band * 0.5);
+    steps.forEach((n, i) => {
+      const h = grow[i] ?? 0, v = n.chd * h, x = m.l + band * i + (band - bw) / 2;
+      K.el('rect', { x, y: sy(v), width: bw, height: Math.max(0, sy(0) - sy(v)), rx: 4, style: 'fill:var(--series-1)' }, svg);
+      if (h > 0.98) K.txt(svg, x + bw / 2, sy(v) - 6, n.chd.toFixed(1) + '%', { 'text-anchor': 'middle', class: 'val' });
+      K.txt(svg, x + bw / 2, H - 22, n.rule.replace('Normal / optimal BP', 'Normal BP'), { 'text-anchor': 'middle', style: 'font-size:11px' });
+    });
+    K.el('line', { x1: m.l, x2: W - m.r, y1: sy(0), y2: sy(0), style: 'stroke:var(--axis)' }, svg);
+  }
+
+  let cancelWalk = () => {}, shownCHD = 0;
+  function route() {
+    document.getElementById('cholV').textContent = ui.chol.value;
+    document.getElementById('smokeV').textContent = ui.smoke.value;
+    document.getElementById('wtV').textContent = ui.wt.value;
+    const p = walk(), ids = new Set(p.map(n => n.id)), leaf = p[p.length - 1];
+    Object.entries(nodeEls).forEach(([id, r]) => { r.style.stroke = ids.has(id) ? 'var(--text-primary)' : 'transparent'; r.style.opacity = ids.has(id) ? 1 : 0.45; });
+    Object.entries(linkEls).forEach(([id, l]) => { l.style.stroke = ids.has(id) ? 'var(--text-primary)' : 'var(--axis)'; });
+    document.getElementById('stopNote').textContent = leaf.id === 'bpN' ? 'The fitted tree does not split the normal-BP group further, so cholesterol, smoking and weight don’t change this result.'
+      : leaf.id === 'chL' ? 'With cholesterol under 225 the tree stops here.' : leaf.id === 'smL' ? 'Under 25 cigarettes a day the tree stops here.' : '';
+    const steps = p.slice(1);
+    // walk the token along each link in turn, growing that step's bar as it arrives
+    cancelWalk();
+    const links = steps.map(n => linkEls[n.id]), seg = 1 / links.length, from = shownCHD;
+    cancelWalk = K.animate(380 * links.length + 200, t => {
+      const k = Math.min(links.length - 1, Math.floor(t / seg)), lt = K.clamp((t - k * seg) / seg, 0, 1);
+      const L = links[k], pt = L.getPointAtLength(lt * L.getTotalLength());
+      token.setAttribute('cx', pt.x); token.setAttribute('cy', pt.y);
+      drawPath(steps, steps.map((_, i) => i < k ? 1 : i === k ? lt : 0));
+      shownCHD = K.lerp(from, leaf.chd, t);
+      document.getElementById('chd').textContent = shownCHD.toFixed(1) + '%';
+    });
+    document.getElementById('mult').textContent = `${(leaf.chd / N.bpN.chd).toFixed(1)}× the normal-BP group (7.1%) · group of ${leaf.n.toLocaleString()} patients${leaf.n < 50 ? ' (small: indicative only)' : ''}`;
+  }
+
+  // ---- cluster profiles: parallel coordinates ----
+  const CL_COL = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'];
+  const AX = [['age', 'Age at death (yrs)'], ['chol', 'Cholesterol (mg/dL)'], ['smoke', 'Cigarettes/day'], ['sys', 'Systolic BP (mmHg)']];
+  K.legend(document.getElementById('clLegend'), D.clusters.map((c, i) => [`${c.name} (n=${c.n})`, CL_COL[i]]), 'line');
+  const pcbox = document.getElementById('pc'); let pcCancel = () => {};
+  function drawPC(t = 1) {
+    pcbox.replaceChildren();
+    const W = pcbox.clientWidth || 600, H = 300, m = { l: 30, r: 30, t: 30, b: 34 };
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Parallel coordinates of cluster centroids' }, pcbox);
+    const xs = AX.map((_, i) => m.l + i * (W - m.l - m.r) / (AX.length - 1));
+    const rng = AX.map(([k]) => { const v = D.clusters.map(c => c[k]).concat(D.overall[k]); const lo = Math.min(...v), hi = Math.max(...v), pad = (hi - lo) * 0.12; return [lo - pad, hi + pad]; });
+    const sy = (i, v) => m.t + (1 - (v - rng[i][0]) / (rng[i][1] - rng[i][0])) * (H - m.t - m.b);
+    AX.forEach(([k, label], i) => {
+      K.el('line', { x1: xs[i], x2: xs[i], y1: m.t, y2: H - m.b, style: 'stroke:var(--axis);stroke-width:1.5' }, svg);
+      K.txt(svg, xs[i], H - 12, label, { 'text-anchor': i === 0 ? 'start' : i === AX.length - 1 ? 'end' : 'middle', dx: i === 0 ? -10 : i === AX.length - 1 ? 10 : 0 });
+      const oy = sy(i, D.overall[k]);
+      K.el('line', { x1: xs[i] - 8, x2: xs[i] + 8, y1: oy, y2: oy, style: 'stroke:var(--text-muted);stroke-width:2;stroke-dasharray:3 2' }, svg);
+    });
+    D.clusters.forEach((c, ci) => {
+      const pts = AX.map(([k], i) => [xs[i], sy(i, c[k])]);
+      const g = K.el('g', {}, svg);
+      const path = K.el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(''), fill: 'none', style: `stroke:${CL_COL[ci]};stroke-width:3;stroke-linejoin:round` }, g);
+      const len = path.getTotalLength(); path.style.strokeDasharray = len; path.style.strokeDashoffset = len * (1 - t);
+      pts.forEach((p, i) => {
+        if (t < (i / (pts.length - 1)) - 0.01) return;
+        K.el('circle', { cx: p[0], cy: p[1], r: 5, style: `fill:${CL_COL[ci]};stroke:var(--surface-1);stroke-width:2` }, g);
+        const hit = K.el('circle', { cx: p[0], cy: p[1], r: 13, fill: 'transparent' }, g);
+        hit.addEventListener('pointermove', e => K.tip(e, `${c.name} cluster`, [{ value: c[AX[i][0]].toFixed(2), name: AX[i][1], color: CL_COL[ci] }, { value: D.overall[AX[i][0]].toFixed(2), name: 'overall average' }]));
+        hit.addEventListener('pointerleave', K.hideTip);
+        const top = Math.max(...D.clusters.map(cc => cc[AX[i][0]])) === c[AX[i][0]];   // label only each axis's extreme
+        if (t >= 0.999 && top) K.txt(g, p[0] + (i === AX.length - 1 ? -9 : 9), p[1] - 8, c[AX[i][0]].toFixed(1), { class: 'val', 'text-anchor': i === AX.length - 1 ? 'end' : 'start', style: 'font-size:11px;paint-order:stroke;stroke:var(--surface-1);stroke-width:3px' });
+      });
+    });
+  }
+  K.table(pcbox.parentNode, ['Cluster', ...AX.map(a => a[1]), 'Patients'], D.clusters.map(c => [c.name, ...AX.map(([k]) => c[k].toFixed(2)), c.n.toLocaleString()]).concat([['Overall average', ...AX.map(([k]) => D.overall[k].toFixed(2)), '1,921']]));
+  const playPC = () => { pcCancel(); pcCancel = K.animate(1600, t => drawPC(t)); };
+  document.getElementById('replay').addEventListener('click', playPC);
+
+  // ---- years lost ----
+  const ybox = document.getElementById('years');
+  function drawYears(t = 1) {
+    ybox.replaceChildren();
+    const base = D.clusters[0].age, rows = D.clusters.slice(1).map((c, i) => [c.name, base - c.age, CL_COL[i + 1]]);
+    const W = ybox.clientWidth || 380, lw = 110, thick = 22, gap = 14, H = rows.length * (thick + gap) + 26;
+    const svg = K.el('svg', { width: W, height: H, role: 'img' }, ybox);
+    const sx = v => lw + (v / 12) * (W - lw - 60);
+    [0, 4, 8, 12].forEach(v => { K.el('line', { x1: sx(v), x2: sx(v), y1: 0, y2: H - 20, style: 'stroke:var(--grid)' }, svg); K.txt(svg, sx(v), H - 4, v + ' yrs', { 'text-anchor': 'middle', class: 'muted' }); });
+    rows.forEach(([name, v, c], i) => {
+      const y = 4 + i * (thick + gap), w = (sx(v) - lw) * t;
+      K.txt(svg, lw - 8, y + thick / 2 + 4, name, { 'text-anchor': 'end' });
+      K.el('rect', { x: lw, y, width: Math.max(1, w), height: thick, rx: 4, style: `fill:${c}` }, svg);
+      K.txt(svg, lw + w + 6, y + thick / 2 + 4, (v * t).toFixed(1) + ' yrs', { class: 'val' });
+    });
+  }
+
+  const buildAll = () => { buildTree(); route(); drawPC(); drawYears(); };
+  buildTree(); route(); playPC(); K.animate(1200, drawYears);
+  if (K.param('worst') !== null) document.getElementById('worst').click();
+  K.onResize(buildAll);
+  K.themeToggle(document.getElementById('theme'), buildAll);
+})();
+</script>
+</body>
+</html>

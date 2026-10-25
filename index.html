@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio · Analytics, AI and Enterprise Systems</title>
+<style>
+  :root { color-scheme: light; --page: #f9f9f7; --surface: #fcfcfb; --border: rgba(11,11,11,0.10);
+          --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --accent: #2a78d6; --wash: rgba(42,120,214,0.10); }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) { color-scheme: dark; --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255,255,255,0.10);
+          --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --accent: #3987e5; --wash: rgba(57,135,229,0.16); }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255,255,255,0.10);
+          --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --accent: #3987e5; --wash: rgba(57,135,229,0.16); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  .top { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 0; }
+  .btn { background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .btn:hover { background: var(--wash); }
+  header { padding: 28px 0 10px; }
+  .eyebrow { color: var(--ink-2); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+  h1 { font-size: 36px; line-height: 1.12; margin: 6px 0 10px; font-weight: 650; }
+  .lede { color: var(--ink-2); max-width: 720px; margin: 0; font-size: 16px; }
+  .skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .skills span { font-size: 12px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; }
+  h2 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 36px 0 12px; font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .card .thumb { height: 170px; background: #fff; border-bottom: 1px solid var(--border); overflow: hidden; }
+  .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .card .body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .card h3 { margin: 0; font-size: 18px; font-weight: 650; }
+  .card p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tags span { font-size: 11.5px; color: var(--ink-2); background: var(--wash); border-radius: 999px; padding: 2px 9px; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 6px; }
+  .links a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; }
+  .links a.primary { background: var(--accent); color: #fff; font-weight: 600; }
+  .links a.secondary { color: var(--accent); border: 1px solid var(--border); }
+  .links a:hover { filter: brightness(1.08); }
+  .kind { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  footer { color: var(--muted); font-size: 13px; padding: 40px 0 60px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="btn" href="https://github.com/sazad-here">GitHub</a>
+    <a class="btn" href="https://www.linkedin.com/in/shakila-azad2005/">LinkedIn</a>
+    <button class="btn" id="theme" type="button">◐ Theme</button>
+  </div>
+  <header>
+    <div class="eyebrow">Portfolio · MS Management Information Systems</div>
+    <h1>Analytics, AI and enterprise systems, built on real data</h1>
+    <p class="lede">Interactive models, research prototypes and enterprise-systems analysis. Each project starts from real data, gets cleaned and checked, and ends in something you can explore.</p>
+    <div class="skills"><span>Python</span><span>SQL</span><span>Tableau</span><span>SAS Viya</span><span>Excel</span><span>SAP S/4HANA</span><span>LightGBM</span><span>Data visualization</span></div>
+  </header>
+
+  <h2>Projects</h2>
+  <div class="cards">
+    <article class="card">
+      <a class="thumb" href="healthcare-analytics/"><img src="healthcare-analytics/04-Obesity-Analysis/screenshots/08-dashboard.png" alt="Tableau dashboard of U.S. adult obesity by state, trend and region"></a>
+      <div class="body">
+        <div class="kind">Interactive portfolio · 7 projects</div>
+        <h3>Healthcare Analytics &amp; AI</h3>
+        <p>Seven animated models built from CDC, NCHS, California hospital and SAS data: a profit simulator, a causes-of-death race, an obesity map, a live decision tree and more.</p>
+        <div class="tags"><span>Tableau</span><span>SAS Viya</span><span>Excel</span><span>Python</span></div>
+        <div class="links"><a class="primary" href="healthcare-analytics/">▶ Explore the models</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption"><img src="reliance-under-disruption/figures/paper/Fig00_model_pipeline.png" alt="Model pipeline diagram for the reliance study"></a>
+      <div class="body">
+        <div class="kind">Research prototype · ongoing</div>
+        <h3>Reliance Under Disruption</h3>
+        <p>Does trust in AI advice depend on where its errors fall? A 30-week warehouse simulation with a calibrated LightGBM stockout-risk model (AUROC 0.897), deployed as a live study.</p>
+        <div class="tags"><span>Python</span><span>LightGBM</span><span>Behavioral research</span><span>Render + Postgres</span></div>
+        <div class="links"><a class="primary" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption">Read the project</a><a class="secondary" href="https://github.com/sazad-here/reliance-under-disruption">Source repo</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <a class="thumb" href="https://github.com/sazad-here/portfolio/tree/main/intelligent-enterprise-systems"><img src="intelligent-enterprise-systems/01-order-to-cash-analytics/charts/01-concentration-inversion.png" alt="Order-to-cash customer concentration chart"></a>
+      <div class="body">
+        <div class="kind">Enterprise systems analysis</div>
+        <h3>Intelligent Enterprise Systems</h3>
+        <p>SQL analysis of 708 SAP S/4HANA sales orders, regression modelling, and end-to-end process documentation across order-to-cash, procure-to-pay, production and finance.</p>
+        <div class="tags"><span>SAP S/4HANA</span><span>SQL</span><span>Regression</span><span>ERPsim</span></div>
+        <div class="links"><a class="primary" href="https://github.com/sazad-here/portfolio/tree/main/intelligent-enterprise-systems">Read the project</a></div>
+      </div>
+    </article>
+  </div>
+  <footer>Built from real datasets. Every number shown was checked against its source.</footer>
+</div>
+<script>
+  const root = document.documentElement, saved = localStorage.getItem('theme');
+  if (saved) root.dataset.theme = saved;
+  document.getElementById('theme').addEventListener('click', () => {
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark'; localStorage.setItem('theme', root.dataset.theme);
+  });
+</script>
+</body>
+</html>

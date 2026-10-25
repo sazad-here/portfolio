@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Healthcare Analytics & AI · Interactive Portfolio</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface-1: #fcfcfb; --border: rgba(11,11,11,0.10);
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4;
+    --accent-wash: rgba(42,120,214,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface-1: #1a1a19; --border: rgba(255,255,255,0.10);
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --grid: #2c2c2a; --axis: #383835;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181;
+      --accent-wash: rgba(57,135,229,0.16);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19; --border: rgba(255,255,255,0.10);
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --grid: #2c2c2a; --axis: #383835;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181;
+    --accent-wash: rgba(57,135,229,0.16);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text-primary);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--series-1); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  header.hero { padding: 48px 0 24px; }
+  .eyebrow { color: var(--text-secondary); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 6px 0 10px; font-weight: 650; }
+  .lede { color: var(--text-secondary); max-width: 760px; margin: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 24px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { color: var(--text-secondary); font-size: 13px; }
+  .tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
+  .tile .note { color: var(--text-muted); font-size: 12px; }
+
+  nav.tabs { position: sticky; top: 0; z-index: 5; background: var(--page); border-bottom: 1px solid var(--border); }
+  nav.tabs .wrap { display: flex; gap: 10px; align-items: center; padding-top: 10px; padding-bottom: 10px; }
+  nav.tabs .links { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; }
+  nav.tabs a { white-space: nowrap; text-decoration: none; color: var(--text-secondary); padding: 6px 10px;
+               border-radius: 999px; border: 1px solid transparent; font-size: 13.5px; }
+  nav.tabs a:hover { background: var(--accent-wash); color: var(--text-primary); }
+  nav.tabs a.active { border-color: var(--border); background: var(--surface-1); color: var(--text-primary); font-weight: 600; }
+  .theme-btn { margin-left: auto; flex: none; background: var(--surface-1); color: var(--text-primary);
+               border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+
+  section.project { padding: 40px 0 16px; scroll-margin-top: 60px; }
+  .proj-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; }
+  .proj-head h2 { margin: 0; font-size: 26px; font-weight: 650; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+  .summary { color: var(--text-secondary); max-width: 820px; margin: 8px 0 18px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px; }
+  .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 10px; min-width: 0; }
+  .card h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card .sub { color: var(--text-secondary); font-size: 13px; margin: 2px 0 8px; }
+  .chart { width: 100%; }
+  .chart svg { display: block; overflow: visible; }
+  .chart text { font-size: 12px; fill: var(--text-secondary); }
+  .chart .val { fill: var(--text-primary); font-weight: 600; }
+  .chart .muted { fill: var(--text-muted); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin: 2px 0 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .key-line { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+  .key-rect { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  details.tbl { margin-top: 6px; font-size: 13px; }
+  details.tbl summary { cursor: pointer; color: var(--text-muted); }
+  details.tbl table { border-collapse: collapse; margin-top: 6px; width: 100%; }
+  details.tbl td, details.tbl th { padding: 3px 8px; border-bottom: 1px solid var(--grid); text-align: left; }
+  details.tbl td.n, details.tbl th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  ul.findings { margin: 16px 0 0; padding-left: 20px; max-width: 900px; }
+  ul.findings li { margin: 4px 0; }
+  .shots { display: flex; gap: 10px; overflow-x: auto; padding: 14px 0 4px; }
+  .shots a { flex: none; width: 220px; text-decoration: none; color: var(--text-secondary); font-size: 12px; }
+  .shots img { width: 220px; height: 124px; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid var(--border); display: block; margin-bottom: 4px; }
+  .shots a:hover img { outline: 2px solid var(--series-1); }
+  .folder-link { display: inline-block; margin-top: 10px; font-size: 14px; }
+  .model-link { display: inline-block; margin: 10px 14px 0 0; padding: 7px 16px; border-radius: 999px; background: var(--series-1); color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; }
+  .model-link:hover { filter: brightness(1.1); }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .step { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .step b { display: block; margin-bottom: 2px; }
+  .step span { color: var(--text-secondary); font-size: 13px; }
+  .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .answers .tile .value { font-size: 22px; }
+  .pipeline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; font-size: 14px; }
+  .pipeline .stage { background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; }
+  .pipeline .arrow { color: var(--text-muted); }
+  footer { color: var(--text-muted); font-size: 13px; padding: 40px 0 60px; border-top: 1px solid var(--border); margin-top: 40px; }
+
+  #tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface-1); color: var(--text-primary);
+         border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+         box-shadow: 0 4px 16px rgba(0,0,0,.12); opacity: 0; transition: opacity .08s; max-width: 260px; }
+  #tip .t-title { color: var(--text-secondary); margin-bottom: 4px; }
+  #tip .t-row { display: flex; align-items: center; gap: 8px; }
+  #tip .t-row strong { font-variant-numeric: tabular-nums; }
+  #tip .t-row span.name { color: var(--text-secondary); }
+  .hit:hover + .bar, .bar.on { filter: brightness(1.12); }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<header class="hero wrap">
+  <div class="eyebrow">Healthcare Analytics &amp; AI · Project Portfolio</div>
+  <h1>Healthcare Analytics &amp; AI: Interactive Portfolio</h1>
+  <p class="lede">Seven hands-on projects on real public-health and hospital data. Each one starts from a raw public dataset, gets extracted and cleaned, is analysed in Tableau, SAS Viya or Excel, and is checked number-by-number against the source. Hover any chart for exact values, or open a project's <b>▶ Interactive model</b> to play with it.</p>
+  <div class="pipeline" aria-label="Workflow">
+    <span class="stage">📥 Extract public data</span><span class="arrow">→</span>
+    <span class="stage">🧹 Clean with Python</span><span class="arrow">→</span>
+    <span class="stage">📊 Analyse in Tableau · SAS · Excel</span><span class="arrow">→</span>
+    <span class="stage">✅ Verify against source</span><span class="arrow">→</span>
+    <span class="stage">📝 Report findings</span>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="label">Projects</div><div class="value">7</div><div class="note">Excel · Tableau · SAS · Python</div></div>
+    <div class="tile"><div class="label">Real datasets</div><div class="value">6</div><div class="note">CDC · NCHS · HCAI · GHI · SAS</div></div>
+    <div class="tile"><div class="label">Records analysed</div><div class="value">~238K</div><div class="note">largest file: 12,477 columns</div></div>
+    <div class="tile"><div class="label">Analysis screenshots</div><div class="value">52</div><div class="note">Tableau · SAS · Excel</div></div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Projects">
+  <div class="wrap"><div class="links">
+    <a href="#profit">💰 Profit DSS</a>
+    <a href="#hunger">🌍 Hunger Index</a>
+    <a href="#death">🩺 Causes of Death</a>
+    <a href="#obesity">⚖️ Adult Obesity</a>
+    <a href="#organics">🛒 BigOrganics</a>
+    <a href="#hcai">🏥 Hospital Finance</a>
+    <a href="#heart">❤️ Heart Risk</a>
+    </div><button class="theme-btn" id="theme" type="button" aria-label="Toggle dark mode">◐ Theme</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============ Hospital Profit DSS ============ -->
+<section class="project" id="profit">
+  <div class="proj-head"><h2>💰 Hospital Profit Decision Support System</h2>
+    <div class="tags"><span class="tag">Excel</span><span class="tag">Scenario modelling</span></div></div>
+  <p class="summary">An Excel model of hospital revenue, expenses and net income for five states. Ohio fell far short of an $850K net-income target, so three scenarios were built to close the gap. Every number is a live formula.</p>
+  <div class="grid2">
+    <div class="card"><h3>Net income by state</h3><div class="sub">Base model, per 1,000 population</div><div class="chart" id="c-a1-states"></div></div>
+    <div class="card"><h3>Getting Ohio over the line</h3><div class="sub">Net income by scenario vs the $850K target</div><div class="chart" id="c-a1-ohio"></div></div>
+  </div>
+  <ul class="findings">
+    <li><b>Repricing</b> (Plan B) gets furthest: $959K, from raising inpatient, ER and outpatient unit rates.</li>
+    <li><b>Volume growth</b> (Plan A) also clears the target at $897K without touching prices, because fees and depreciation are fixed and supplies is the only cost that scales with activity.</li>
+  </ul>
+  <a class="model-link" href="01-Hospital-Profit-DSS/model.html" title="Profit simulator: drag the inputs and the Excel formulas recompute live">▶ Interactive model</a>
+</section>
+
+<!-- ============ Global Hunger Index ============ -->
+<section class="project" id="hunger">
+  <div class="proj-head"><h2>🌍 Global Hunger Index Dashboard</h2>
+    <div class="tags"><span class="tag">Tableau</span><span class="tag">2014 GHI</span></div></div>
+  <p class="summary">Four indicators behind the 2014 Global Hunger Index, compared across five countries. The same countries appear in the same order in every panel, so you can read across.</p>
+  <div class="grid4" id="c-a2"></div>
+  <ul class="findings">
+    <li><b>One component can drive the score:</b> Burundi leads on undernourishment (67.3%) yet has the lowest child-underweight rate.</li>
+    <li><b>The index doesn't track child deaths:</b> Chad and Ethiopia score almost the same, but Chad's under-5 mortality is more than double.</li>
+    <li><b>Low hunger, high child undernutrition:</b> Bangladesh and India have the lowest scores and the highest underweight rates.</li>
+  </ul>
+  <div class="shots">
+    <a href="02-Global-Hunger-Index/screenshots/e_dashboard.png"><img loading="lazy" src="02-Global-Hunger-Index/screenshots/e_dashboard.png" alt="">Tableau dashboard</a>
+    <a href="02-Global-Hunger-Index/screenshots/a_hungerindex.png"><img loading="lazy" src="02-Global-Hunger-Index/screenshots/a_hungerindex.png" alt="">Hunger Index</a>
+    <a href="02-Global-Hunger-Index/screenshots/c_undernourishedinpopulation.png"><img loading="lazy" src="02-Global-Hunger-Index/screenshots/c_undernourishedinpopulation.png" alt="">Undernourished</a>
+    <a href="02-Global-Hunger-Index/screenshots/d_mortalityrate.png"><img loading="lazy" src="02-Global-Hunger-Index/screenshots/d_mortalityrate.png" alt="">Under-5 mortality</a>
+  </div>
+  <a class="model-link" href="02-Global-Hunger-Index/model.html" title="Animated bubble chart of 130 countries, 1990 → 2014">▶ Interactive model</a>
+</section>
+
+<!-- ============ Causes of Death ============ -->
+<section class="project" id="death">
+  <div class="proj-head"><h2>🩺 Leading Causes of Death, 1999–2016</h2>
+    <div class="tags"><span class="tag">Tableau</span><span class="tag">NCHS · 10,296 rows</span><span class="tag">Age-adjusted rates</span></div></div>
+  <p class="summary">Five findings from the NCHS mortality file. All rates are age-adjusted deaths per 100,000, so states with older populations don't distort the comparison.</p>
+  <div class="grid2">
+    <div class="card"><h3>Opposite trends since 1999</h3><div class="sub">U.S. age-adjusted death rate per 100,000</div><div class="chart" id="c-a3-trend"></div></div>
+    <div class="card"><h3>Leading causes, 2016</h3><div class="sub">U.S. age-adjusted death rate per 100,000</div><div class="chart" id="c-a3-causes"></div></div>
+    <div class="card"><h3>Heart disease predicts overall mortality</h3><div class="sub">Each dot is a state, 2016 · <span id="a3-r"></span></div><div class="chart" id="c-a3-scatter"></div></div>
+    <div class="card"><h3>Suicide rate by state, 2016</h3><div class="sub">Age-adjusted per 100,000 · top 10 and bottom 5 of 51 (all in the table)</div><div class="chart" id="c-a3-suicide"></div></div>
+  </div>
+  <ul class="findings">
+    <li>Heart disease <b>−37.9%</b> and stroke <b>−39.4%</b>, while Alzheimer's rose <b>+83.6%</b>.</li>
+    <li>Unintentional injuries <b>+34.3%</b>, accelerating after 2013, overtook stroke and CLRD to become the #3 cause.</li>
+    <li>Suicide forms a Mountain West cluster: Montana 25.9 vs the District of Columbia 5.2.</li>
+  </ul>
+  <div class="shots">
+    <a href="03-Causes-of-Death-Analysis/screenshots/03-finding2-us-trends-line.png"><img loading="lazy" src="03-Causes-of-Death-Analysis/screenshots/03-finding2-us-trends-line.png" alt="">Trend lines</a>
+    <a href="03-Causes-of-Death-Analysis/screenshots/05-finding4-suicide-by-state-bar.png"><img loading="lazy" src="03-Causes-of-Death-Analysis/screenshots/05-finding4-suicide-by-state-bar.png" alt="">Suicide by state</a>
+    <a href="03-Causes-of-Death-Analysis/screenshots/06-finding5a-heart-vs-allcause-scatter.png"><img loading="lazy" src="03-Causes-of-Death-Analysis/screenshots/06-finding5a-heart-vs-allcause-scatter.png" alt="">Scatter + trend line</a>
+    <a href="03-Causes-of-Death-Analysis/screenshots/07-finding5b-cause-share-pie.png"><img loading="lazy" src="03-Causes-of-Death-Analysis/screenshots/07-finding5b-cause-share-pie.png" alt="">Cause share pie</a>
+  </div>
+  <a class="model-link" href="03-Causes-of-Death-Analysis/model.html" title="Bar-chart race of causes of death, any state, 1999 → 2016">▶ Interactive model</a>
+</section>
+
+<!-- ============ Obesity ============ -->
+<section class="project" id="obesity">
+  <div class="proj-head"><h2>⚖️ U.S. Adult Obesity Analysis</h2>
+    <div class="tags"><span class="tag">Tableau</span><span class="tag">Python cleaning</span><span class="tag">CDC BRFSS · 97,666 rows</span></div></div>
+  <p class="summary">Analysis driven by written hypotheses. A 110,880-row CDC survey file was cleaned down to 97,666 usable rows: suppressed values dropped, coordinates split, census regions added. Each hypothesis was then tested in Tableau.</p>
+  <div class="grid2">
+    <div class="card"><h3>Obesity up, overweight flat</h3><div class="sub">U.S. adults, % · 2011–2024</div><div class="chart" id="c-a4-trend"></div></div>
+    <div class="card"><h3>Inactivity tracks obesity</h3><div class="sub">Each dot is a state, 2023 · <span id="a4-r"></span></div><div class="chart" id="c-a4-scatter"></div></div>
+    <div class="card"><h3>Education gap: 9.4 points</h3><div class="sub">Adult obesity %, 2023, by education</div><div class="chart" id="c-a4-edu"></div></div>
+    <div class="card"><h3>Income gap: only 3.5 points</h3><div class="sub">Adult obesity %, 2023, by household income</div><div class="chart" id="c-a4-inc"></div></div>
+  </div>
+  <ul class="findings">
+    <li><b>Regional (H1, refined):</b> Midwest 36.0% ≈ South 35.9%, both about six points above the West (30.9%) and Northeast (29.9%).</li>
+    <li><b>Surprise:</b> the overweight share <i>fell</i> while obesity rose. People are crossing the BMI-30 line rather than everyone gaining weight evenly.</li>
+    <li><b>Socioeconomic (H3, partly):</b> education separates people about 3× more sharply than income does.</li>
+  </ul>
+  <div class="shots">
+    <a href="04-Obesity-Analysis/screenshots/08-dashboard.png"><img loading="lazy" src="04-Obesity-Analysis/screenshots/08-dashboard.png" alt="">Summary dashboard</a>
+    <a href="04-Obesity-Analysis/screenshots/02-v1-map-obesity-by-state.png"><img loading="lazy" src="04-Obesity-Analysis/screenshots/02-v1-map-obesity-by-state.png" alt="">State map</a>
+    <a href="04-Obesity-Analysis/screenshots/06-v5-scatter-inactivity.png"><img loading="lazy" src="04-Obesity-Analysis/screenshots/06-v5-scatter-inactivity.png" alt="">Inactivity scatter</a>
+    <a href="04-Obesity-Analysis/screenshots/07-v6-bar-by-education.png"><img loading="lazy" src="04-Obesity-Analysis/screenshots/07-v6-bar-by-education.png" alt="">By education</a>
+  </div>
+  <a class="model-link" href="04-Obesity-Analysis/model.html" title="Animated state tile map + linked scatter, 2011 → 2024">▶ Interactive model</a>
+</section>
+
+<!-- ============ BigOrganics ============ -->
+<section class="project" id="organics">
+  <div class="proj-head"><h2>🛒 BigOrganics Customer Analytics</h2>
+    <div class="tags"><span class="tag">SAS Visual Analytics</span><span class="tag">111K customers</span></div></div>
+  <p class="summary">A full SAS Viya workflow: profile the customer base, impute missing values with documented rules, then segment customers and model who buys organic products.</p>
+  <div class="steps">
+    <div class="step"><b>1 · Profile</b><span>Age groups, bubble plot of loyalty × affluence, geo maps of frequency and spend</span></div>
+    <div class="step"><b>2 · Impute</b><span>8 <code>_IMP</code> variables, e.g. Age → 53, Affluence → 8, Gender → U</span></div>
+    <div class="step"><b>3 · Compare</b><span>Box plot of affluence and age by purchase target</span></div>
+    <div class="step"><b>4 · Cluster</b><span>5 segments on affluence, age, tenure, purchase count, spend</span></div>
+    <div class="step"><b>5 · Decision tree</b><span>10 predictors, leaf size 20, <b>KS = 0.4707</b></span></div>
+  </div>
+  <div class="shots">
+    <a href="06-BigOrganics-SAS-Analytics/support/screenshots/02_bubble_plot.png"><img loading="lazy" src="06-BigOrganics-SAS-Analytics/support/screenshots/02_bubble_plot.png" alt="">Bubble plot</a>
+    <a href="06-BigOrganics-SAS-Analytics/support/screenshots/04_total_spend_geo.png"><img loading="lazy" src="06-BigOrganics-SAS-Analytics/support/screenshots/04_total_spend_geo.png" alt="">Spend by region</a>
+    <a href="06-BigOrganics-SAS-Analytics/support/screenshots/10_boxplot_affluence_age.png"><img loading="lazy" src="06-BigOrganics-SAS-Analytics/support/screenshots/10_boxplot_affluence_age.png" alt="">Box plot</a>
+    <a href="06-BigOrganics-SAS-Analytics/support/screenshots/11_clustering.png"><img loading="lazy" src="06-BigOrganics-SAS-Analytics/support/screenshots/11_clustering.png" alt="">Clustering</a>
+    <a href="06-BigOrganics-SAS-Analytics/support/screenshots/12a_decision_tree.png"><img loading="lazy" src="06-BigOrganics-SAS-Analytics/support/screenshots/12a_decision_tree.png" alt="">Decision tree</a>
+  </div>
+  <a class="model-link" href="06-BigOrganics-SAS-Analytics/model.html" title="The real SAS decision tree with customers flowing through it">▶ Interactive model</a>
+</section>
+
+<!-- ============ Hospital Financials ============ -->
+<section class="project" id="hcai">
+  <div class="proj-head"><h2>🏥 California Hospital Financial Analysis</h2>
+    <div class="tags"><span class="tag">Python · pandas</span><span class="tag">Excel live formulas</span><span class="tag">444 reports × 12,477 columns</span></div></div>
+  <p class="summary">Eight executive questions answered from California's HCAI disclosure data. Answers were computed twice, in pandas and as live Excel formulas, and the two matched. The hard part was the data-integrity traps: 444 filed reports describe only 432 hospitals.</p>
+  <div class="answers">
+    <div class="tile"><div class="label">Highest debt ratio</div><div class="value">6.05</div><div class="note">Newport Bay Hospital</div></div>
+    <div class="tile"><div class="label">Hospitals at a loss</div><div class="value">112</div><div class="note">unique facilities (115 reports)</div></div>
+    <div class="tile"><div class="label">Top Medicare + Medi-Cal mix</div><div class="value">99.76%</div><div class="note">Newport Bay, near-tie with Laguna Honda</div></div>
+    <div class="tile"><div class="label">Watsonville charity care</div><div class="value">2.62%</div><div class="note">inside the 1–5% target band</div></div>
+    <div class="tile"><div class="label">Non-profit hospitals</div><div class="value">225</div><div class="note">not 233: that counts reports</div></div>
+    <div class="tile"><div class="label">Sutter Amador COVID stimulus</div><div class="value">$13.3M</div><div class="note">line P14_C1_L205</div></div>
+    <div class="tile"><div class="label">Facilities that filed twice</div><div class="value">11</div><div class="note">fiscal-year changes, not errors</div></div>
+    <div class="tile"><div class="label">Reports with no balance sheet</div><div class="value">46</div><div class="note">excluded, never treated as zero</div></div>
+  </div>
+  <div class="shots">
+    <a href="07-Hospital-Financial-Analysis/shots/xl2_new_column.png"><img loading="lazy" src="07-Hospital-Financial-Analysis/shots/xl2_new_column.png" alt="">New ratio column (formula)</a>
+    <a href="07-Hospital-Financial-Analysis/shots/xl1_answers_formulas.png"><img loading="lazy" src="07-Hospital-Financial-Analysis/shots/xl1_answers_formulas.png" alt="">All answers as formulas</a>
+    <a href="07-Hospital-Financial-Analysis/shots/xlq1_debt.png"><img loading="lazy" src="07-Hospital-Financial-Analysis/shots/xlq1_debt.png" alt="">Debt ratio ranking</a>
+    <a href="07-Hospital-Financial-Analysis/shots/xlq8_norris.png"><img loading="lazy" src="07-Hospital-Financial-Analysis/shots/xlq8_norris.png" alt="">Repeat filers</a>
+  </div>
+  <a class="model-link" href="07-Hospital-Financial-Analysis/model.html" title="Explorer with a guided tour and a duplicate-merge animation">▶ Interactive model</a>
+</section>
+
+<!-- ============ Heart Risk ============ -->
+<section class="project" id="heart">
+  <div class="proj-head"><h2>❤️ Framingham Heart Risk Analysis</h2>
+    <div class="tags"><span class="tag">SAS Visual Statistics</span><span class="tag">k-means</span><span class="tag">Decision tree</span><span class="tag">5,209 patients</span></div></div>
+  <p class="summary">k-means clustering (k = 3) finds three cardiovascular risk profiles. A decision tree then traces how risk factors compound toward death from coronary heart disease (CHD).</p>
+  <div class="legend" id="a7-legend"></div>
+  <div class="grid4" id="c-a7-clusters"></div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><h3>Risk factors compound</h3><div class="sub">Share of deaths from CHD along the riskiest branch of the tree</div><div class="chart" id="c-a7-path"></div></div>
+    <div class="card"><h3>What the clusters say</h3>
+      <ul class="findings" style="margin-top:8px">
+        <li><b>Smoking costs the most life:</b> heavy smokers (25 cig/day) die about <b>10.4 years</b> earlier than the low-risk group.</li>
+        <li><b>High BP and cholesterol</b> (183 mmHg, 259 mg/dL) cost about <b>1.6 years</b>.</li>
+        <li><b>Blood pressure is the top predictor</b> (importance 94.7). The tree splits on it first, and high BP alone more than doubles the CHD share.</li>
+        <li>The last leaf holds only 25 patients, so read its 56% as indicative, not precise.</li>
+      </ul></div>
+  </div>
+  <div class="shots">
+    <a href="08-Heart-Risk-Analysis/cluster-analysis-screenshot.png"><img loading="lazy" src="08-Heart-Risk-Analysis/cluster-analysis-screenshot.png" alt="">Cluster output</a>
+    <a href="08-Heart-Risk-Analysis/decision-tree-screenshot.png"><img loading="lazy" src="08-Heart-Risk-Analysis/decision-tree-screenshot.png" alt="">Decision tree</a>
+    <a href="08-Heart-Risk-Analysis/cluster-2-highlighted.png"><img loading="lazy" src="08-Heart-Risk-Analysis/cluster-2-highlighted.png" alt="">Heavy-smoker cluster</a>
+  </div>
+  <a class="model-link" href="08-Heart-Risk-Analysis/model.html" title="Walk a patient down the risk tree; animated cluster profiles">▶ Interactive model</a>
+</section>
+
+</main>
+<footer class="wrap">
+  Charts are drawn from <code>assets/data.js</code>. The Causes of Death and Obesity data are recomputed from the source CSVs by <code>tools/build_data.py</code>; the other values come from the original analyses.
+  
+</footer>
+
+<script src="assets/data.js"></script>
+<script>
+(() => {
+  const D = window.DATA;
+  const NS = 'http://www.w3.org/2000/svg';
+  const tip = document.getElementById('tip');
+
+  // ---------- helpers ----------
+  const el = (tag, attrs = {}, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
+  const nice = (max, n = 4) => {
+    const raw = max / n, mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
+    return { step, top: Math.ceil(max / step) * step };
+  };
+  const money = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : '$' + Math.round(v / 1e3) + 'K';
+  const compactMoney = v => v === 0 ? '$0' : v >= 1e6 ? '$' + (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : '$' + Math.round(v / 1e3) + 'K';
+  const pct = v => v.toFixed(1) + '%';
+  const one = v => v.toFixed(1);
+  const axis = v => String(+v.toFixed(1));
+
+  function showTip(evt, title, rows) {
+    tip.replaceChildren();
+    if (title) { const t = document.createElement('div'); t.className = 't-title'; t.textContent = title; tip.appendChild(t); }
+    for (const r of rows) {
+      const row = document.createElement('div'); row.className = 't-row';
+      if (r.color) { const k = document.createElement('span'); k.className = 'key-line'; k.style.background = r.color; row.appendChild(k); }
+      const s = document.createElement('strong'); s.textContent = r.value; row.appendChild(s);
+      if (r.name) { const nm = document.createElement('span'); nm.className = 'name'; nm.textContent = r.name; row.appendChild(nm); }
+      tip.appendChild(row);
+    }
+    tip.style.opacity = 1;
+    const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = evt.clientX + pad, y = evt.clientY + pad;
+    if (x + w > innerWidth - 8) x = evt.clientX - w - pad;
+    if (y + h > innerHeight - 8) y = evt.clientY - h - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  const hideTip = () => { tip.style.opacity = 0; };
+
+  function tableView(container, headers, rows) {
+    const d = document.createElement('details'); d.className = 'tbl';
+    const s = document.createElement('summary'); s.textContent = 'Show data table'; d.appendChild(s);
+    const t = document.createElement('table');
+    const hr = document.createElement('tr');
+    headers.forEach((h, i) => { const th = document.createElement('th'); th.textContent = h; if (i) th.className = 'n'; hr.appendChild(th); });
+    t.appendChild(hr);
+    rows.forEach(r => { const tr = document.createElement('tr'); r.forEach((c, i) => { const td = document.createElement('td'); td.textContent = c; if (i) td.className = 'n'; tr.appendChild(td); }); t.appendChild(tr); });
+    d.appendChild(t); container.appendChild(d);
+  }
+
+  function legend(container, items, kind = 'line') {
+    const lg = document.createElement('div'); lg.className = 'legend';
+    items.forEach(([name, color]) => {
+      const sp = document.createElement('span'); const k = document.createElement('i');
+      k.className = kind === 'line' ? 'key-line' : 'key-rect'; k.style.background = color;
+      sp.appendChild(k); sp.appendChild(document.createTextNode(name)); lg.appendChild(sp);
+    });
+    container.appendChild(lg);
+  }
+
+  // Rounded data-end, square at baseline (horizontal bar)
+  const hbarPath = (x, y, w, h, r = 4) => {
+    r = Math.min(r, w, h / 2);
+    return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+  };
+  const vbarPath = (x, y, w, h, r = 4) => {
+    r = Math.min(r, h, w / 2);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
+
+  // ---------- horizontal bars ----------
+  function hbar(id, rows, { fmt = one, axisFmt, color = 'var(--series-1)', colors, target, targetLabel, labelW, max, unit = '', breakAfter, breakLabel } = {}) {
+    const box = typeof id === 'string' ? document.getElementById(id) : id;
+    box.replaceChildren();
+    const W = box.clientWidth || 400;
+    const thick = rows.length > 20 ? 9 : 18, gap = rows.length > 20 ? 5 : 10;
+    const lw = labelW ?? Math.min(170, Math.max(...rows.map(r => r[0].length)) * 6.6 + 8);
+    const brk = breakAfter ? 22 : 0;
+    const right = 56, top = target ? 18 : 4, H = top + rows.length * (thick + gap) + brk + 22;
+    const svg = el('svg', { width: W, height: H, role: 'img' }, box);
+    const plotW = W - lw - right;
+    const { step, top: vmax } = nice(max ?? Math.max(...rows.map(r => r[1]), target || 0), Math.max(2, Math.min(4, Math.floor(plotW / 55))));
+    const sx = v => lw + (v / vmax) * plotW;
+    for (let v = 0; v <= vmax + 1e-9; v += step) {
+      el('line', { x1: sx(v), x2: sx(v), y1: top - 2, y2: H - 20, style: 'stroke:var(--grid)' }, svg);
+      txt(svg, sx(v), H - 6, (axisFmt || axis)(v), { 'text-anchor': 'middle', class: 'muted' });
+    }
+    rows.forEach(([label, v], i) => {
+      const y = top + i * (thick + gap) + (breakAfter && i >= breakAfter ? brk : 0);
+      if (breakAfter && i === breakAfter) txt(svg, lw - 8, y - brk / 2 - 1, breakLabel || '⋯', { 'text-anchor': 'end', class: 'muted' });
+      txt(svg, lw - 8, y + thick / 2 + 4, label, { 'text-anchor': 'end' });
+      const c = colors ? colors[i] : color;
+      const bar = el('path', { d: hbarPath(lw, y, Math.max(1, sx(v) - lw), thick), class: 'bar', style: `fill:${c}` }, svg);
+      if (rows.length <= 20) txt(svg, sx(v) + 6, y + thick / 2 + 4, fmt(v), { class: 'val' });
+      const hit = el('rect', { x: 0, y: y - gap / 2, width: W, height: thick + gap, fill: 'transparent', tabindex: 0 }, svg);
+      const on = e => { bar.classList.add('on'); showTip(e, label, [{ value: fmt(v) + unit, color: c }]); };
+      hit.addEventListener('pointermove', on);
+      hit.addEventListener('focus', e => { const r = hit.getBoundingClientRect(); on({ clientX: r.left + lw, clientY: r.top }); });
+      hit.addEventListener('pointerleave', () => { bar.classList.remove('on'); hideTip(); });
+      hit.addEventListener('blur', () => { bar.classList.remove('on'); hideTip(); });
+    });
+    el('line', { x1: lw, x2: lw, y1: top - 2, y2: H - 20, style: 'stroke:var(--axis)' }, svg);
+    if (target) {
+      el('line', { x1: sx(target), x2: sx(target), y1: top - 6, y2: H - 20, style: 'stroke:var(--text-primary);stroke-width:1.5' }, svg);
+      txt(svg, sx(target), top - 8, targetLabel || 'target', { 'text-anchor': 'middle', class: 'val' });
+    }
+  }
+
+  // ---------- line chart with crosshair ----------
+  function lines(id, series, { fmt = one, colors, endLabels = false, yMin } = {}) {
+    const box = document.getElementById(id); box.replaceChildren();
+    const names = Object.keys(series);
+    legend(box, names.map((n, i) => [n, colors[i]]));
+    const W = box.clientWidth || 480, H = 280, m = { l: 40, r: endLabels ? 46 : 16, t: 10, b: 26 };
+    const svg = el('svg', { width: W, height: H, role: 'img' }, box);
+    const xs = series[names[0]].map(p => p[0]);
+    const all = names.flatMap(n => series[n].map(p => p[1]));
+    const lo = yMin ?? 0;
+    const { step, top: hi } = nice(Math.max(...all) - lo, 4);
+    const ymax = lo + hi;
+    const sx = x => m.l + (x - xs[0]) / (xs[xs.length - 1] - xs[0]) * (W - m.l - m.r);
+    const sy = y => m.t + (1 - (y - lo) / (ymax - lo)) * (H - m.t - m.b);
+    for (let v = lo; v <= ymax + 1e-9; v += step) {
+      el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg);
+      txt(svg, m.l - 6, sy(v) + 4, axis(v), { 'text-anchor': 'end', class: 'muted' });
+    }
+    const every = Math.ceil(xs.length / Math.max(2, Math.floor((W - m.l - m.r) / 52)));
+    xs.forEach((x, i) => { if (i % every === 0 || i === xs.length - 1) txt(svg, sx(x), H - 6, String(x), { 'text-anchor': 'middle', class: 'muted' }); });
+    names.forEach((n, i) => {
+      const d = series[n].map((p, j) => (j ? 'L' : 'M') + sx(p[0]) + ',' + sy(p[1])).join('');
+      el('path', { d, fill: 'none', style: `stroke:${colors[i]};stroke-width:2;stroke-linejoin:round;stroke-linecap:round` }, svg);
+      const last = series[n][series[n].length - 1];
+      el('circle', { cx: sx(last[0]), cy: sy(last[1]), r: 4, style: `fill:${colors[i]};stroke:var(--surface-1);stroke-width:2` }, svg);
+      if (endLabels) txt(svg, sx(last[0]) + 8, sy(last[1]) + 4, fmt(last[1]), { class: 'val' });
+    });
+    const cross = el('line', { y1: m.t, y2: H - m.b, style: 'stroke:var(--axis);opacity:0' }, svg);
+    const dots = names.map((n, i) => el('circle', { r: 4, style: `fill:${colors[i]};stroke:var(--surface-1);stroke-width:2;opacity:0` }, svg));
+    const hit = el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', e => {
+      const r = svg.getBoundingClientRect(), px = e.clientX - r.left;
+      let j = 0, best = 1e9;
+      xs.forEach((x, k) => { const dd = Math.abs(sx(x) - px); if (dd < best) { best = dd; j = k; } });
+      cross.setAttribute('x1', sx(xs[j])); cross.setAttribute('x2', sx(xs[j])); cross.style.opacity = 1;
+      const rows = names.map((n, i) => ({ v: series[n][j][1], name: n, color: colors[i] })).sort((a, b) => b.v - a.v);
+      names.forEach((n, i) => { dots[i].setAttribute('cx', sx(xs[j])); dots[i].setAttribute('cy', sy(series[n][j][1])); dots[i].style.opacity = 1; });
+      showTip(e, String(xs[j]), rows.map(r => ({ value: fmt(r.v), name: r.name, color: r.color })));
+    });
+    hit.addEventListener('pointerleave', () => { cross.style.opacity = 0; dots.forEach(d => d.style.opacity = 0); hideTip(); });
+    tableView(box, ['Year', ...names], xs.map((x, j) => [x, ...names.map(n => fmt(series[n][j][1]))]));
+  }
+
+  // ---------- scatter with trend line ----------
+  function scatter(id, pts, { xLabel, yLabel, fmt = one, color = 'var(--series-1)' } = {}) {
+    const box = document.getElementById(id); box.replaceChildren();
+    const W = box.clientWidth || 480, H = 290, m = { l: 44, r: 14, t: 10, b: 40 };
+    const svg = el('svg', { width: W, height: H, role: 'img' }, box);
+    const xv = pts.map(p => p.x), yv = pts.map(p => p.y);
+    const pad = (a, b) => [a - (b - a) * 0.06, b + (b - a) * 0.06];
+    const [x0, x1] = pad(Math.min(...xv), Math.max(...xv)), [y0, y1] = pad(Math.min(...yv), Math.max(...yv));
+    const sx = x => m.l + (x - x0) / (x1 - x0) * (W - m.l - m.r);
+    const sy = y => m.t + (1 - (y - y0) / (y1 - y0)) * (H - m.t - m.b);
+    const ticks = (a, b) => { const { step } = nice(b - a, 4); const out = []; for (let v = Math.ceil(a / step) * step; v <= b; v += step) out.push(v); return out; };
+    ticks(y0, y1).forEach(v => { el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg); txt(svg, m.l - 6, sy(v) + 4, fmt(v).replace(/\.0$/, ''), { 'text-anchor': 'end', class: 'muted' }); });
+    ticks(x0, x1).forEach(v => txt(svg, sx(v), H - 22, fmt(v).replace(/\.0$/, ''), { 'text-anchor': 'middle', class: 'muted' }));
+    txt(svg, (m.l + W - m.r) / 2, H - 4, xLabel, { 'text-anchor': 'middle' });
+    txt(svg, 12, m.t + 4, yLabel, { 'text-anchor': 'start', class: 'muted', transform: '' });
+    // least-squares trend line
+    const n = pts.length, mx = xv.reduce((a, b) => a + b) / n, my = yv.reduce((a, b) => a + b) / n;
+    const b = pts.reduce((s, p) => s + (p.x - mx) * (p.y - my), 0) / pts.reduce((s, p) => s + (p.x - mx) ** 2, 0);
+    const a = my - b * mx;
+    el('line', { x1: sx(x0), y1: sy(a + b * x0), x2: sx(x1), y2: sy(a + b * x1), style: 'stroke:var(--text-muted);stroke-width:1.5' }, svg);
+    const marks = pts.map(p => el('circle', { cx: sx(p.x), cy: sy(p.y), r: 4.5, style: `fill:${color};stroke:var(--surface-1);stroke-width:2` }, svg));
+    const ring = el('circle', { r: 8, style: 'fill:none;stroke:var(--text-primary);stroke-width:1.5;opacity:0' }, svg);
+    const hit = el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', e => {
+      const r = svg.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      let k = -1, best = 24 ** 2;  // nearest point within 24px
+      pts.forEach((p, i) => { const d = (sx(p.x) - px) ** 2 + (sy(p.y) - py) ** 2; if (d < best) { best = d; k = i; } });
+      if (k < 0) { ring.style.opacity = 0; hideTip(); return; }
+      const p = pts[k]; ring.setAttribute('cx', sx(p.x)); ring.setAttribute('cy', sy(p.y)); ring.style.opacity = 1;
+      showTip(e, p.label, [{ value: fmt(p.x), name: xLabel }, { value: fmt(p.y), name: yLabel }]);
+    });
+    hit.addEventListener('pointerleave', () => { ring.style.opacity = 0; hideTip(); });
+    tableView(box, ['State', xLabel, yLabel], [...pts].sort((p, q) => q.y - p.y).map(p => [p.label, fmt(p.x), fmt(p.y)]));
+  }
+
+  // ---------- columns ----------
+  function columns(id, rows, { fmt = pct, color = 'var(--series-1)' } = {}) {
+    const box = document.getElementById(id); box.replaceChildren();
+    const W = box.clientWidth || 480, H = 270, m = { l: 36, r: 8, t: 22, b: 48 };
+    const svg = el('svg', { width: W, height: H, role: 'img' }, box);
+    const { step, top } = nice(Math.max(...rows.map(r => r[1])), 4);
+    const sy = v => m.t + (1 - v / top) * (H - m.t - m.b);
+    for (let v = 0; v <= top + 1e-9; v += step) {
+      el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg);
+      txt(svg, m.l - 6, sy(v) + 4, v + '%', { 'text-anchor': 'end', class: 'muted' });
+    }
+    const band = (W - m.l - m.r) / rows.length, bw = Math.min(24 * 2, band * 0.5);
+    rows.forEach(([label, v], i) => {
+      const x = m.l + band * i + (band - bw) / 2;
+      const bar = el('path', { d: vbarPath(x, sy(v), bw, sy(0) - sy(v)), class: 'bar', style: `fill:${color}` }, svg);
+      txt(svg, x + bw / 2, sy(v) - 6, fmt(v), { 'text-anchor': 'middle', class: 'val' });
+      const parts = label.split(' ≥ ');
+      txt(svg, x + bw / 2, H - 30, parts[0], { 'text-anchor': 'middle' });
+      if (parts[1]) txt(svg, x + bw / 2, H - 15, '≥ ' + parts[1], { 'text-anchor': 'middle', class: 'muted' });
+      const hit = el('rect', { x: m.l + band * i, y: m.t, width: band, height: H - m.t - m.b, fill: 'transparent', tabindex: 0 }, svg);
+      hit.addEventListener('pointermove', e => { bar.classList.add('on'); showTip(e, label, [{ value: fmt(v), name: 'of deaths from CHD', color }]); });
+      hit.addEventListener('pointerleave', () => { bar.classList.remove('on'); hideTip(); });
+    });
+    el('line', { x1: m.l, x2: W - m.r, y1: sy(0), y2: sy(0), style: 'stroke:var(--axis)' }, svg);
+    tableView(box, ['Branch', 'CHD share'], rows.map(r => [r[0], fmt(r[1])]));
+  }
+
+  // Small multiples: lay out every card before measuring any of them
+  function multiples(id, keys, draw) {
+    const g = document.getElementById(id); g.replaceChildren();
+    const charts = keys.map(k => {
+      const card = document.createElement('div'); card.className = 'card';
+      const h = document.createElement('h3'); h.textContent = k; card.appendChild(h);
+      const c = document.createElement('div'); c.className = 'chart'; card.appendChild(c); g.appendChild(card);
+      return [c, k];
+    });
+    charts.forEach(([c, k]) => draw(c, k));
+  }
+
+  // ---------- render everything ----------
+  const S = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)'];
+
+  function render() {
+    // Hospital Profit DSS
+    hbar('c-a1-states', D.a1_states, { fmt: money, axisFmt: compactMoney, target: 850000, targetLabel: '$850K target' });
+    tableView(document.getElementById('c-a1-states'), ['State', 'Net income'], D.a1_states.map(r => [r[0], money(r[1])]));
+    hbar('c-a1-ohio', D.a1_ohio, { fmt: money, axisFmt: compactMoney, target: 850000, targetLabel: '$850K target', max: 1000000 });
+    tableView(document.getElementById('c-a1-ohio'), ['Scenario', 'Net income'], D.a1_ohio.map(r => [r[0], money(r[1])]));
+
+    // Global Hunger Index: small multiples, same country order everywhere
+    multiples('c-a2', Object.keys(D.a2).filter(k => k !== 'countries'), (c, k) => {
+      const rows = D.a2.countries.map((n, i) => [n, D.a2[k][i]]);
+      hbar(c, rows, { fmt: one, labelW: 78 });
+      tableView(c, ['Country', k], rows.map(r => [r[0], one(r[1])]));
+    });
+
+    // Causes of Death
+    lines('c-a3-trend', D.a3_trends, { colors: S, fmt: v => v.toFixed(0) === String(v) ? String(v) : one(v) });
+    hbar('c-a3-causes', D.a3_causes2016, { fmt: one, labelW: 150 });
+    tableView(document.getElementById('c-a3-causes'), ['Cause', 'Rate'], D.a3_causes2016.map(r => [r[0], one(r[1])]));
+    document.getElementById('a3-r').textContent = 'r = ' + D.a3_r.toFixed(2);
+    scatter('c-a3-scatter', D.a3_scatter.map(r => ({ label: r[0], x: r[1], y: r[2] })), { xLabel: 'Heart disease rate', yLabel: 'All-cause rate' });
+    const su = D.a3_suicide2016;
+    hbar('c-a3-suicide', [...su.slice(0, 10), ...su.slice(-5)], { fmt: one, labelW: 130, breakAfter: 10, breakLabel: `⋯ ${su.length - 15} more states` });
+    tableView(document.getElementById('c-a3-suicide'), ['State', 'Rate'], D.a3_suicide2016.map(r => [r[0], one(r[1])]));
+
+    // Obesity
+    const names = { 'Overweight': 'Overweight', 'Obesity': 'Obesity', 'No Leisure-Time Physical Activity': 'No leisure-time activity' };
+    const tr = {}; Object.entries(D.a4_trend).forEach(([k, v]) => tr[names[k]] = v);
+    lines('c-a4-trend', tr, { colors: S, fmt: v => one(v), endLabels: true, yMin: 15 });
+    document.getElementById('a4-r').textContent = 'r = ' + D.a4_r.toFixed(2);
+    scatter('c-a4-scatter', D.a4_scatter.map(r => ({ label: `${r[0]} · ${r[2]}`, x: r[3], y: r[4] })), { xLabel: 'No leisure-time activity %', yLabel: 'Obesity %' });
+    hbar('c-a4-edu', D.a4_education.map(r => [r[0].replace('Some college or technical school', 'Some college / technical'), r[1]]), { fmt: pct, axisFmt: v => v + '%', labelW: 160, max: 40 });
+    tableView(document.getElementById('c-a4-edu'), ['Education', 'Obesity'], D.a4_education.map(r => [r[0], pct(r[1])]));
+    hbar('c-a4-inc', D.a4_income.map(r => [r[0].replace(' or greater', '+'), r[1]]), { fmt: pct, axisFmt: v => v + '%', labelW: 160, max: 40 });
+    tableView(document.getElementById('c-a4-inc'), ['Income', 'Obesity'], D.a4_income.map(r => [r[0], pct(r[1])]));
+
+    // Heart Risk: one small multiple per variable, colour follows the cluster
+    const cl = D.a7_clusters, cc = S.slice(0, 3);
+    const lg = document.getElementById('a7-legend'); lg.replaceChildren();
+    legend(lg, cl.labels.map((l, i) => [l, cc[i]]), 'rect');
+    multiples('c-a7-clusters', Object.keys(cl).filter(k => k !== 'labels'), (c, k) => {
+      const rows = cl.labels.map((l, i) => [l.split(' · ')[0], cl[k][i]]);
+      hbar(c, rows, { fmt: one, colors: cc, labelW: 72 });
+      tableView(c, ['Cluster', k], cl.labels.map((l, i) => [l, cl[k][i].toFixed(2)]));
+    });
+    columns('c-a7-path', D.a7_path, { fmt: v => v.toFixed(1) + '%' });
+  }
+
+  render();
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+
+  // ---------- theme toggle ----------
+  const root = document.documentElement;
+  const saved = localStorage.getItem('theme'); if (saved) root.dataset.theme = saved;
+  document.getElementById('theme').addEventListener('click', () => {
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    localStorage.setItem('theme', root.dataset.theme);
+  });
+
+  // ---------- active tab on scroll ----------
+  const links = [...document.querySelectorAll('nav.tabs a')];
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  }), { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('section.project').forEach(s => io.observe(s));
+})();
+</script>
+</body>
+</html>

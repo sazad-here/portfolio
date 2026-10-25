@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Causes of Death · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#death">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · NCHS mortality data</div>
+  <h1>🩺 The Race Between Causes of Death, 1999 → 2016</h1>
+  <p class="lede">Ten leading causes re-rank year by year as their death rates rise and fall. Choose the U.S. or any state, switch between age-adjusted rates and raw death counts, and press play.</p>
+  <p class="how">Age-adjusted rate = deaths per 100,000, standardised to the U.S. 2000 age structure, so states with older populations don't look worse just for being older. Raw deaths show the burden in people.</p>
+</header>
+
+<div class="layout wide-left">
+  <div class="panel">
+    <div class="controls">
+      <label>Geography <select id="state"></select></label>
+      <div class="seg" role="group" aria-label="Measure">
+        <button type="button" data-m="0" class="on">Age-adjusted rate</button><button type="button" data-m="1">Deaths</button>
+      </div>
+    </div>
+    <div id="tl"></div>
+    <div class="chart" id="race"></div>
+  </div>
+  <aside class="stack">
+    <div class="panel">
+      <h2>Change since 1999</h2>
+      <div class="sub" id="chgSub"></div>
+      <div class="chart" id="change"></div>
+    </div>
+    <div class="panel">
+      <h2>Rank moves</h2>
+      <div class="sub">Biggest climbs and falls in rank, 1999 → selected year</div>
+      <div id="moves" class="notes"></div>
+    </div>
+  </aside>
+</div>
+<div class="panel">
+  <h2>Try this</h2>
+  <ul class="notes">
+    <li><b>United States, play:</b> watch unintentional injuries pass stroke and CLRD around 2014–2016 and take the #3 spot.</li>
+    <li><b>West Virginia:</b> injuries reach 89.7 per 100,000 by 2016, almost double the national rate.</li>
+    <li><b>Switch to Deaths:</b> Alzheimer's climbs much faster in raw counts (44,536 → 116,103 nationally) as the population ages.</li>
+  </ul>
+</div>
+</main>
+<footer class="wrap">Source: <code>NCHS_Leading_Causes_Clean.csv</code> (10,296 rows), the data behind the Tableau analysis. Rates between years are interpolated for smooth motion; the year label shows the nearest actual year.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/causes.js"></script>
+<script>
+(() => {
+  const K = Kit, D = window.MODEL_DATA;
+  const PALETTE = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)'];
+  // colour follows the cause, never its rank: the five causes in the key findings get hues, the rest share muted grey
+  const STORY = ['Heart disease', 'Cancer', 'Unintentional injuries', 'Stroke', "Alzheimer's disease"];
+  const color = {}; D.causes.forEach(c => color[c] = STORY.includes(c) ? PALETTE[STORY.indexOf(c)] : 'var(--text-muted)');
+  let state = 'United States', mi = 0, pos = 0;
+  const stSel = document.getElementById('state');
+  D.states.forEach(s => K.html('option', { value: s, text: s }, stSel));
+  stSel.addEventListener('change', () => { state = stSel.value; draw(); side(); });
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x === b)); mi = +b.dataset.m; draw(); side();
+  }));
+
+  const val = (c, p) => {
+    const s = D.data[state][c], i = Math.floor(p), j = Math.min(D.years.length - 1, i + 1);
+    return K.lerp(s[i][mi], s[j][mi], p - i);
+  };
+  const rankAt = i => {
+    const order = D.causes.map(c => [c, D.data[state][c][i][mi]]).sort((a, b) => b[1] - a[1]);
+    const r = {}; order.forEach(([c], k) => r[c] = k); return r;
+  };
+
+  const box = document.getElementById('race');
+  const fmtV = v => mi ? K.fmt.int(v) : v.toFixed(1);
+  function draw() {
+    box.replaceChildren();
+    const W = box.clientWidth || 760, rowH = 38, thick = 26, lw = 170, right = 76, top = 8;
+    const H = top + D.causes.length * rowH + 26;
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Bar chart race of causes of death' }, box);
+    const i = Math.floor(pos), j = Math.min(D.years.length - 1, i + 1), t = pos - i;
+    const ri = rankAt(i), rj = rankAt(j);
+    // fixed x scale per geography + measure, so bars grow and shrink honestly over time
+    const maxAll = Math.max(...D.causes.flatMap(c => D.data[state][c].map(v => v[mi])));
+    const { step, top: xmax } = K.nice(maxAll, 4);
+    const sx = v => lw + (v / xmax) * (W - lw - right);
+    for (let v = 0; v <= xmax + 1e-6; v += step) {
+      K.el('line', { x1: sx(v), x2: sx(v), y1: top - 4, y2: H - 22, style: 'stroke:var(--grid)' }, svg);
+      K.txt(svg, sx(v), H - 6, mi ? K.fmt.money(v).replace('$', '') : v, { 'text-anchor': 'middle', class: 'muted' });
+    }
+    const ease = K.ease(K.clamp((t - 0.15) / 0.7, 0, 1));    // ranks swap mid-year, values move continuously
+    D.causes.forEach(c => {
+      const v = val(c, pos), r = K.lerp(ri[c], rj[c], ease), y = top + r * rowH;
+      const w = Math.max(1, sx(v) - lw);
+      const g = K.el('g', {}, svg);
+      K.txt(g, lw - 8, y + thick / 2 + 4, c, { 'text-anchor': 'end' });
+      const rr = Math.min(4, w);
+      K.el('path', { d: `M${lw},${y}H${lw + w - rr}Q${lw + w},${y} ${lw + w},${y + rr}V${y + thick - rr}Q${lw + w},${y + thick} ${lw + w - rr},${y + thick}H${lw}Z`, style: `fill:${color[c]}` }, g);
+      K.txt(g, lw + w + 6, y + thick / 2 + 4, fmtV(v), { class: 'val' });
+      const hit = K.el('rect', { x: 0, y: y - 4, width: W, height: rowH, fill: 'transparent' }, g);
+      hit.addEventListener('pointermove', e => K.tip(e, `${c} · ${D.years[Math.round(pos)]}`, [{ value: fmtV(D.data[state][c][Math.round(pos)][mi]), name: mi ? 'deaths' : 'per 100,000', color: color[c] }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+    K.el('line', { x1: lw, x2: lw, y1: top - 4, y2: H - 22, style: 'stroke:var(--axis)' }, svg);
+    K.txt(svg, W - 4, H - 34, D.years[Math.round(pos)], { 'text-anchor': 'end', style: 'font-size:44px;font-weight:650;fill:var(--grid)' });
+  }
+
+  function side() {
+    const yi = Math.round(pos), yr = D.years[yi];
+    document.getElementById('chgSub').textContent = `% change in ${mi ? 'deaths' : 'age-adjusted rate'}, 1999 → ${yr}`;
+    const rows = D.causes.map(c => { const a = D.data[state][c][0][mi], b = D.data[state][c][yi][mi]; return [c, a ? (b - a) / a * 100 : 0]; })
+      .sort((a, b) => b[1] - a[1]);
+    const cb = document.getElementById('change'); cb.replaceChildren();
+    const W = cb.clientWidth || 320, lw = 124, vw = 46, thick = 14, gap = 8, H = rows.length * (thick + gap) + 4;
+    const svg = K.el('svg', { width: W, height: H, role: 'img' }, cb);
+    const neg = Math.max(0, -Math.min(...rows.map(r => r[1]))), posMax = Math.max(0, ...rows.map(r => r[1]));
+    const span = W - lw - vw - 8;
+    const sx = v => lw + span * ((v + neg) / (neg + posMax || 1));
+    rows.forEach(([c, v], k) => {
+      const y = 2 + k * (thick + gap), x0 = sx(0), x1 = sx(v);
+      K.txt(svg, lw - 6, y + thick / 2 + 4, c.length > 18 ? c.slice(0, 17) + '…' : c, { 'text-anchor': 'end' });
+      K.el('rect', { x: Math.min(x0, x1), y, width: Math.max(1, Math.abs(x1 - x0)), height: thick, rx: 3, style: `fill:${v >= 0 ? 'var(--series-2)' : 'var(--series-1)'}` }, svg);
+      K.txt(svg, W - 2, y + thick / 2 + 4, (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0) + '%', { class: 'val', 'text-anchor': 'end', style: 'font-size:11px' });
+    });
+    K.el('line', { x1: sx(0), x2: sx(0), y1: 0, y2: H, style: 'stroke:var(--axis)' }, svg);
+    // rank moves
+    const r0 = rankAt(0), r1 = rankAt(yi);
+    const mv = D.causes.map(c => [c, r0[c] - r1[c]]).filter(m => m[1]).sort((a, b) => b[1] - a[1]);
+    const M = document.getElementById('moves'); M.replaceChildren();
+    if (!mv.length) K.html('div', { text: 'No rank changes yet.' }, M);
+    mv.slice(0, 6).forEach(([c, d]) => K.html('div', { text: `${d > 0 ? '▲' : '▼'} ${c}: #${r0[c] + 1} → #${r1[c] + 1}` }, M));
+  }
+
+  let lastYear = -1;
+  const tl = K.timeline(document.getElementById('tl'), {
+    labels: D.years.map(String), speed: 1.4,
+    onChange: p => { pos = p; draw(); const y = Math.round(p); if (y !== lastYear) { lastYear = y; side(); } },
+  });
+  tl.set(+K.param('t', 0)); side();
+  K.onResize(() => { draw(); side(); });
+  K.themeToggle(document.getElementById('theme'));
+})();
+</script>
+</body>
+</html>

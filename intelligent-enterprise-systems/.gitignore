@@ -1,0 +1,42 @@
+# --------------------------------------------------------------------------
+# SAFETY RULES — do not relax these without reading evidence/README.md
+# --------------------------------------------------------------------------
+
+# Screenshots stay out unless explicitly allowlisted below. Each image must be
+# cropped and checked against evidence/README.md before its negation is added,
+# so that publishing one is always a deliberate act.
+evidence/*.png
+evidence/*.jpg
+evidence/*.jpeg
+evidence/*.PNG
+
+# Redacted and reviewed:
+!evidence/01-project-cost-report.png
+!evidence/02-cost-center-planning.png
+!evidence/03-project-network-graph.png
+!evidence/04-project-builder-wbs.png
+!evidence/05-secondary-cost-element.png
+!evidence/06-network-confirmation.png
+
+# Never commit coursework submissions, curriculum material, or peer reviews.
+*.docx
+*.doc
+*.pptx
+*.pdf
+*.xlsx
+*.xls
+
+# --------------------------------------------------------------------------
+# Standard
+# --------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.sqlite
+*.db
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

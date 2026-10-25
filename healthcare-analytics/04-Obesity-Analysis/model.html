@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U.S. Adult Obesity · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .tile { cursor: pointer; }
+  .tile rect { transition: fill .25s; }
+  .grid2m { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; }
+  @media (max-width: 960px) { .grid2m { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Portfolio</a><a href="../index.html#obesity">Project summary</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · CDC BRFSS survey data</div>
+  <h1>⚖️ Watching Obesity Spread, 2011 → 2024</h1>
+  <p class="lede">Every state, every year. Press play and the map recolours as adult obesity rises. The scatter moves in step: states with more physically inactive adults sit higher. Hover a state on either chart to highlight it on both.</p>
+  <p class="how">Tile map: one square per state, laid out roughly geographically so each state is the same size. Colour scale is fixed across all years so changes are real, not rescaled.</p>
+</header>
+
+<div class="panel">
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Map measure">
+      <button type="button" data-k="obesity" class="on">Obesity</button><button type="button" data-k="overweight">Overweight</button><button type="button" data-k="inactive">No leisure-time activity</button>
+    </div>
+  </div>
+  <div id="tl"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="grid2m" style="margin:16px 0">
+  <div class="panel">
+    <h2 id="mapTitle">Adult obesity by state</h2>
+    <div class="sub" style="display:flex;align-items:center;gap:8px"><span id="rampLo"></span><span class="ramp" id="ramp"></span><span id="rampHi"></span><span id="noData"></span></div>
+    <div class="chart" id="map"></div>
+  </div>
+  <div class="panel">
+    <h2>Inactivity vs obesity</h2>
+    <div class="sub" id="scSub">Each dot is a state</div>
+    <div class="chart" id="scatter"></div>
+  </div>
+</div>
+<div class="panel">
+  <h2>National trend</h2>
+  <div class="sub">U.S. adults, % · the marker follows the timeline</div>
+  <div id="trendLegend"></div>
+  <div class="chart" id="trend"></div>
+</div>
+</main>
+<footer class="wrap">Source: <code>CDC_BRFSS_Obesity_Clean.csv</code> (CDC dataset hn4x-zwk7, 97,666 cleaned rows), Total population rows. Grey tiles mean the state did not report that year, e.g. Kentucky and Pennsylvania in 2023.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/models/obesity.js"></script>
+<script>
+(() => {
+  const K = Kit, D = window.MODEL_DATA;
+  const TILES = { AK: [0, 0], ME: [11, 0], WI: [6, 1], VT: [10, 1], NH: [11, 1],
+    WA: [1, 2], ID: [2, 2], MT: [3, 2], ND: [4, 2], MN: [5, 2], IL: [6, 2], MI: [7, 2], NY: [9, 2], MA: [10, 2],
+    OR: [1, 3], NV: [2, 3], WY: [3, 3], SD: [4, 3], IA: [5, 3], IN: [6, 3], OH: [7, 3], PA: [8, 3], NJ: [9, 3], CT: [10, 3], RI: [11, 3],
+    CA: [1, 4], UT: [2, 4], CO: [3, 4], NE: [4, 4], MO: [5, 4], KY: [6, 4], WV: [7, 4], VA: [8, 4], MD: [9, 4], DE: [10, 4],
+    AZ: [2, 5], NM: [3, 5], KS: [4, 5], AR: [5, 5], TN: [6, 5], NC: [7, 5], SC: [8, 5], DC: [9, 5],
+    OK: [4, 6], LA: [5, 6], MS: [6, 6], AL: [7, 6], GA: [8, 6], HI: [0, 7], TX: [4, 7], FL: [9, 7] };
+  const NAMES = { obesity: 'Adult obesity', overweight: 'Adult overweight', inactive: 'No leisure-time physical activity' };
+  let mk = 'obesity', pos = 0, hover = null;
+  const yearsL = D.years.map(String);
+
+  const at = (arr, p) => {
+    const i = Math.floor(p), j = Math.min(arr.length - 1, i + 1), a = arr[i], b = arr[j];
+    if (a != null && b != null) return K.lerp(a, b, p - i);
+    return (p - i < 0.5 ? a : b) ?? null;
+  };
+  const range = k => { const v = D.states.flatMap(s => s[k]).filter(x => x != null); return [Math.floor(Math.min(...v)), Math.ceil(Math.max(...v))]; };
+
+  // ---- tile map ----
+  const mapBox = document.getElementById('map'); let tiles = {};
+  function buildMap() {
+    mapBox.replaceChildren(); tiles = {};
+    const W = mapBox.clientWidth || 600, cell = Math.min(52, (W - 4) / 12), gap = 3, H = cell * 8 + 4;
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Tile map of states' }, mapBox);
+    D.states.forEach(s => {
+      const [c, r] = TILES[s.abbr];
+      const g = K.el('g', { class: 'tile', tabindex: 0, transform: `translate(${c * cell + 2},${r * cell + 2})` }, svg);
+      const rect = K.el('rect', { width: cell - gap, height: cell - gap, rx: 6 }, g);
+      const ab = K.txt(g, (cell - gap) / 2, cell * 0.42, s.abbr, { 'text-anchor': 'middle', style: 'font-weight:600;font-size:12px' });
+      const vt = K.txt(g, (cell - gap) / 2, cell * 0.72, '', { 'text-anchor': 'middle', style: 'font-size:10.5px' });
+      g.addEventListener('pointermove', e => { setHover(s.abbr); tipFor(e, s); });
+      g.addEventListener('pointerleave', () => { setHover(null); K.hideTip(); });
+      g.addEventListener('focus', () => setHover(s.abbr));
+      tiles[s.abbr] = { rect, ab, vt, g };
+    });
+    paintMap();
+  }
+  function paintMap() {
+    const [lo, hi] = range(mk);
+    D.states.forEach(s => {
+      const t = tiles[s.abbr]; if (!t) return;
+      const v = at(s[mk], pos);
+      if (v == null) {
+        t.rect.style.fill = 'var(--surface-2)'; t.rect.style.stroke = 'var(--axis)'; t.rect.style.strokeDasharray = '3 3';
+        t.ab.style.fill = t.vt.style.fill = 'var(--text-muted)'; t.vt.textContent = 'n/a';
+      } else {
+        const u = (v - lo) / (hi - lo);
+        t.rect.style.fill = K.seq(u); t.rect.style.strokeDasharray = '';
+        t.rect.style.stroke = hover === s.abbr ? 'var(--text-primary)' : 'none'; t.rect.style.strokeWidth = 2;
+        t.ab.style.fill = t.vt.style.fill = K.seqTextColor(u); t.vt.textContent = v.toFixed(1);
+      }
+    });
+    document.getElementById('mapTitle').textContent = `${NAMES[mk]} by state, ${yearsL[Math.round(pos)]}`;
+    document.getElementById('rampLo').textContent = lo + '%';
+    document.getElementById('rampHi').textContent = hi + '%';
+    document.getElementById('ramp').style.background = K.rampCss();
+  }
+  const tipFor = (e, s) => {
+    const y = Math.round(pos);
+    K.tip(e, `${s.name} · ${yearsL[y]}`, [
+      { value: K.fmt.pct(s.obesity[y]), name: 'obesity' }, { value: K.fmt.pct(s.overweight[y]), name: 'overweight' },
+      { value: K.fmt.pct(s.inactive[y]), name: 'no leisure-time activity' }, { value: s.region, name: 'region' }]);
+  };
+
+  // ---- scatter ----
+  const scBox = document.getElementById('scatter'); let dots = {}, sc = null;
+  function buildScatter() {
+    scBox.replaceChildren(); dots = {};
+    const W = scBox.clientWidth || 420, H = Math.max(320, Math.min(420, W * 0.85)), m = { l: 40, r: 10, t: 10, b: 40 };
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Scatter of inactivity against obesity' }, scBox);
+    const [x0, x1] = [12, 40], [y0, y1] = [18, 46];
+    const sx = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r), sy = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+    for (let v = 20; v <= 45; v += 5) { K.el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg); K.txt(svg, m.l - 6, sy(v) + 4, v, { 'text-anchor': 'end', class: 'muted' }); }
+    for (let v = 15; v <= 40; v += 5) K.txt(svg, sx(v), H - 22, v, { 'text-anchor': 'middle', class: 'muted' });
+    K.txt(svg, (m.l + W - m.r) / 2, H - 4, 'No leisure-time activity (%)', { 'text-anchor': 'middle' });
+    K.txt(svg, m.l + 4, m.t + 12, 'Obesity (%)', { class: 'muted' });
+    const trend = K.el('line', { style: 'stroke:var(--text-muted);stroke-width:1.5' }, svg);
+    D.states.forEach(s => {
+      const c = K.el('circle', { r: 5, style: 'fill:var(--series-1);stroke:var(--surface-1);stroke-width:2' }, svg);
+      dots[s.abbr] = c;
+    });
+    const ring = K.el('circle', { r: 9, style: 'fill:none;stroke:var(--text-primary);stroke-width:1.5;opacity:0' }, svg);
+    const lbl = K.txt(svg, 0, 0, '', { class: 'val', style: 'paint-order:stroke;stroke:var(--surface-1);stroke-width:3px' });
+    const hit = K.el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', e => {
+      const r = svg.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      let best = 24 ** 2, k = null;
+      D.states.forEach(s => { const c = dots[s.abbr]; if (c.style.opacity === '0') return; const d = (+c.getAttribute('cx') - px) ** 2 + (+c.getAttribute('cy') - py) ** 2; if (d < best) { best = d; k = s; } });
+      setHover(k && k.abbr); if (k) tipFor(e, k); else K.hideTip();
+    });
+    hit.addEventListener('pointerleave', () => { setHover(null); K.hideTip(); });
+    sc = { sx, sy, trend, ring, lbl, x0, x1 };
+    paintScatter();
+  }
+  function paintScatter() {
+    if (!sc) return;
+    const pts = [];
+    D.states.forEach(s => {
+      const x = at(s.inactive, pos), y = at(s.obesity, pos), c = dots[s.abbr];
+      if (x == null || y == null) { c.style.opacity = 0; return; }
+      c.style.opacity = 1; c.setAttribute('cx', sc.sx(x)); c.setAttribute('cy', sc.sy(y)); pts.push([x, y]);
+    });
+    const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+    const sxy = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0), sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0), syy = pts.reduce((a, p) => a + (p[1] - my) ** 2, 0);
+    const b = sxy / sxx, a = my - b * mx, r = sxy / Math.sqrt(sxx * syy);
+    sc.trend.setAttribute('x1', sc.sx(sc.x0)); sc.trend.setAttribute('y1', sc.sy(a + b * sc.x0));
+    sc.trend.setAttribute('x2', sc.sx(sc.x1)); sc.trend.setAttribute('y2', sc.sy(a + b * sc.x1));
+    document.getElementById('scSub').textContent = `Each dot is a state · ${yearsL[Math.round(pos)]} · r = ${r.toFixed(2)} across ${n} states`;
+    const h = hover && dots[hover];
+    if (h && h.style.opacity !== '0') {
+      sc.ring.setAttribute('cx', h.getAttribute('cx')); sc.ring.setAttribute('cy', h.getAttribute('cy')); sc.ring.style.opacity = 1;
+      sc.lbl.setAttribute('x', +h.getAttribute('cx') + 11); sc.lbl.setAttribute('y', +h.getAttribute('cy') + 4); sc.lbl.textContent = hover;
+    } else { sc.ring.style.opacity = 0; sc.lbl.textContent = ''; }
+  }
+  const setHover = a => { if (hover === a) return; hover = a; paintMap(); paintScatter(); };
+
+  // ---- national trend ----
+  const trBox = document.getElementById('trend'); let tr = null;
+  const LINES = [['obesity', 'Obesity', 'var(--series-1)'], ['overweight', 'Overweight', 'var(--series-2)'], ['inactive', 'No leisure-time activity', 'var(--series-3)']];
+  K.legend(document.getElementById('trendLegend'), LINES.map(l => [l[1], l[2]]), 'line');
+  function buildTrend() {
+    trBox.replaceChildren();
+    const W = trBox.clientWidth || 900, H = 220, m = { l: 36, r: 46, t: 8, b: 24 };
+    const svg = K.el('svg', { width: W, height: H, role: 'img' }, trBox);
+    const sx = i => m.l + i / (D.years.length - 1) * (W - m.l - m.r), sy = v => m.t + (1 - (v - 15) / 25) * (H - m.t - m.b);
+    for (let v = 15; v <= 40; v += 5) { K.el('line', { x1: m.l, x2: W - m.r, y1: sy(v), y2: sy(v), style: 'stroke:var(--grid)' }, svg); K.txt(svg, m.l - 6, sy(v) + 4, v, { 'text-anchor': 'end', class: 'muted' }); }
+    D.years.forEach((y, i) => { if (i % 2 === 0 || i === D.years.length - 1) K.txt(svg, sx(i), H - 6, y, { 'text-anchor': 'middle', class: 'muted' }); });
+    const marker = K.el('line', { y1: m.t, y2: H - m.b, style: 'stroke:var(--axis);stroke-width:1.5' }, svg);
+    const ends = LINES.map(([k, , c]) => {
+      K.el('path', { d: D.national[k].map((v, i) => (i ? 'L' : 'M') + sx(i) + ',' + sy(v)).join(''), fill: 'none', style: `stroke:${c};stroke-width:2;stroke-linejoin:round` }, svg);
+      return [K.el('circle', { r: 4.5, style: `fill:${c};stroke:var(--surface-1);stroke-width:2` }, svg), K.txt(svg, 0, 0, '', { class: 'val' })];
+    });
+    tr = { sx, sy, marker, ends };
+    paintTrend();
+  }
+  function paintTrend() {
+    if (!tr) return;
+    tr.marker.setAttribute('x1', tr.sx(pos)); tr.marker.setAttribute('x2', tr.sx(pos));
+    LINES.forEach(([k], i) => {
+      const v = at(D.national[k], pos), [c, t] = tr.ends[i];
+      c.setAttribute('cx', tr.sx(pos)); c.setAttribute('cy', tr.sy(v));
+      t.setAttribute('x', tr.sx(pos) + 8); t.setAttribute('y', tr.sy(v) + 4); t.textContent = v.toFixed(1);
+    });
+  }
+
+  function stats() {
+    const y = Math.round(pos), vals = D.states.map(s => [s, s.obesity[y]]).filter(v => v[1] != null).sort((a, b) => b[1] - a[1]);
+    const S = document.getElementById('stats'); S.replaceChildren();
+    const add = (label, value, note) => { const d = K.html('div', { className: 'stat' }, S); K.html('div', { className: 'label', text: label }, d); K.html('div', { className: 'value', text: value }, d); if (note) K.html('div', { className: 'note', text: note }, d); };
+    add('National obesity', K.fmt.pct(D.national.obesity[y]), `${(D.national.obesity[y] - D.national.obesity[0] >= 0 ? '+' : '')}${(D.national.obesity[y] - D.national.obesity[0]).toFixed(1)} pts since 2011`);
+    add('States ≥ 35% obese', `${vals.filter(v => v[1] >= 35).length} of ${vals.length}`, 'reporting states + DC');
+    add('Highest', vals[0][0].name, K.fmt.pct(vals[0][1]));
+    add('Lowest', vals[vals.length - 1][0].name, K.fmt.pct(vals[vals.length - 1][1]));
+  }
+
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x === b)); mk = b.dataset.k; paintMap();
+  }));
+  let lastY = -1;
+  const tl = K.timeline(document.getElementById('tl'), { labels: yearsL, speed: 1.2, onChange: p => {
+    pos = p; paintMap(); paintScatter(); paintTrend();
+    const y = Math.round(p); if (y !== lastY) { lastY = y; stats(); }
+  } });
+  const build = () => { buildMap(); buildScatter(); buildTrend(); };
+  build(); tl.set(+K.param('t', 0));
+  K.onResize(build);
+  K.themeToggle(document.getElementById('theme'), paintMap);
+})();
+</script>
+</body>
+</html>
