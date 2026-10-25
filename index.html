@@ -42,6 +42,7 @@
   .links a.secondary { color: var(--accent); border: 1px solid var(--border); }
   .links a:hover { filter: brightness(1.08); }
   .kind { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .warn { font-size: 13px; color: var(--ink); background: rgba(237,161,0,0.14); border: 1px solid rgba(237,161,0,0.45); border-radius: 8px; padding: 8px 10px; }
   footer { color: var(--muted); font-size: 13px; padding: 40px 0 60px; }
 </style>
 </head>
@@ -88,7 +89,8 @@
         <h3>Reliance Under Disruption</h3>
         <p>Does trust in AI advice depend on where its errors fall? A 30-week warehouse simulation with a calibrated LightGBM stockout-risk model (AUROC 0.897), deployed as a live study.</p>
         <div class="tags"><span>Python</span><span>LightGBM</span><span>Behavioral research</span><span>Render + Postgres</span></div>
-        <div class="links"><a class="primary" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption">Read the project</a><a class="secondary" href="https://github.com/sazad-here/reliance-under-disruption">Source repo</a></div>
+        <div class="warn" role="note">⚠️ <b>Live research study.</b> Starting a session adds a real response to the study data. Please take part only if you mean to.</div>
+        <div class="links"><a class="primary live-study" href="https://reliance-study.onrender.com" target="_blank" rel="noopener">▶ Open the live study</a><a class="secondary" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption">Read the project</a></div>
       </div>
     </article>
     <article class="card">
@@ -111,6 +113,10 @@
     const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
     root.dataset.theme = dark ? 'light' : 'dark'; localStorage.setItem('theme', root.dataset.theme);
   });
+  // the reliance study is a live data-collection site: confirm before opening it
+  document.querySelectorAll('a.live-study').forEach(a => a.addEventListener('click', e => {
+    if (!confirm('This opens a live research study. Starting a session adds a real response to the study data.\n\nContinue only if you want to take part.')) e.preventDefault();
+  }));
 </script>
 </body>
 </html>

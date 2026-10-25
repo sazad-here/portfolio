@@ -8,7 +8,7 @@ Analytics, AI and enterprise-systems projects built on real data, one folder per
 |---|---|---|
 | [Healthcare Analytics & AI](healthcare-analytics/) | Seven animated, interactive models built from CDC, NCHS, California HCAI and SAS data | [▶ Live models](https://sazad-here.github.io/portfolio/healthcare-analytics/) |
 | [Managerial Decision Making](managerial-decision-making/) | Seven interactive models: regression, distributions, relationships, product-mix and operations optimisation, decision analysis | [▶ Live models](https://sazad-here.github.io/portfolio/managerial-decision-making/) |
-| [Reliance Under Disruption](reliance-under-disruption/) | Research prototype on human reliance on AI advice under propagating supply-chain disruption | [Project](reliance-under-disruption/) · [source repo](https://github.com/sazad-here/reliance-under-disruption) |
+| [Reliance Under Disruption](reliance-under-disruption/) | Research prototype on human reliance on AI advice under propagating supply-chain disruption | [Live study](https://reliance-study.onrender.com) ⚠️ real data collection · [project](reliance-under-disruption/) |
 | [Intelligent Enterprise Systems](intelligent-enterprise-systems/) | SQL analysis of SAP S/4HANA sales orders, regression modelling and ERP process documentation | [Project](intelligent-enterprise-systems/) |
 
 ## Notes
