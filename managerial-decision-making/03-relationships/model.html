@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%94%97%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relationship Explorer · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · relationships between variables</div>
+  <h1>🔗 Relationship Explorer</h1>
+  <p class="lede">Two questions every analyst asks: does one group answer differently from another, and do two measures move together? Switch the grouping and watch the opinion mix re-sort, then click any cell of the correlation grid to see the scatter behind the number.</p>
+  <p class="how">Survey: 400 respondents · employees: 204 salary records.</p>
+</header>
+
+<div class="panel" style="margin-top:18px">
+  <h2>Opinion by group</h2>
+  <div class="controls">
+    <label>Group respondents by <select id="grp"><option>Age</option><option>Gender</option><option>Children</option><option>Salary band</option><option>State (top 6)</option></select></label>
+  </div>
+  <div id="opLegend"></div>
+  <div class="chart" id="cross"></div>
+</div>
+
+<div class="layout" style="grid-template-columns:1fr 1fr">
+  <div class="panel">
+    <h2>Correlation grid</h2>
+    <div class="sub">Pearson r between employee measures · click a cell</div>
+    <div class="chart" id="heat"></div>
+  </div>
+  <div class="panel">
+    <h2 id="pairTitle"></h2>
+    <div class="sub" id="pairSub"></div>
+    <div class="chart" id="pair"></div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Data: P03_02 (survey of 400 people) and P03_08 (204 employee salary records), from Albright, Business Analytics. Gender is coded 1/2 in the survey source.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/relationships.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, D = window.MODEL_DATA, S = D.survey;
+  const OPS = ['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'];
+  const OPC = [0.1, 0.3, 0.5, 0.72, 0.95].map(K.seq);       // ordinal: one hue, light → dark
+  K.legend(document.getElementById('opLegend'), OPS.map((o, i) => [o, OPC[i]]), 'rect');
+  let shown = null;
+  const band = s => s < 50000 ? '< $50K' : s < 100000 ? '$50–100K' : s < 150000 ? '$100–150K' : '$150K +';
+  function groups(g) {
+    const key = i => g === 'Age' ? S.Age[i] : g === 'Gender' ? 'Gender ' + S.Gender[i] : g === 'Children' ? (S.Children[i] >= 3 ? '3+ children' : S.Children[i] + ' children') :
+      g === 'Salary band' ? band(S.Salary[i]) : S.State[i];
+    const by = {}; S.Opinion.forEach((o, i) => { const k = key(i); (by[k] = by[k] || OPS.map(() => 0))[OPS.indexOf(o)]++; });
+    let keys = Object.keys(by);
+    if (g === 'Age') keys = ['Young', 'Middle-aged', 'Elderly'].filter(k => by[k]);
+    else if (g === 'Salary band') keys = ['< $50K', '$50–100K', '$100–150K', '$150K +'].filter(k => by[k]);
+    else if (g.startsWith('State')) keys = keys.sort((a, b) => by[b].reduce((s, v) => s + v) - by[a].reduce((s, v) => s + v)).slice(0, 6);
+    else keys.sort();
+    return keys.map(k => ({ k, n: by[k].reduce((s, v) => s + v, 0), share: by[k].map(v => v / by[k].reduce((s, x) => s + x, 0)) }));
+  }
+  function update() {
+    const G = groups(document.getElementById('grp').value);
+    const from = shown && shown.length === G.length ? shown : G.map(g => ({ ...g, share: g.share.map(() => 0.2) }));
+    K.animate(550, t => { shown = G.map((g, i) => ({ ...g, share: g.share.map((s, j) => K.lerp(from[i].share[j], s, t)) })); drawCross(); });
+  }
+  function drawCross() {
+    const box = document.getElementById('cross'); box.replaceChildren();
+    const W = box.clientWidth || 900, lw = 150, rowH = 34, H = shown.length * rowH + 30;
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Opinion mix by group' }, box);
+    const sx = U.scale(0, 1, lw, W - 10);
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => { K.el('line', { x1: sx(v), x2: sx(v), y1: 0, y2: H - 22, style: 'stroke:var(--grid)' }, svg); K.txt(svg, sx(v), H - 6, (v * 100) + '%', { 'text-anchor': 'middle', class: 'muted' }); });
+    shown.forEach((g, i) => {
+      const y = 4 + i * rowH; let acc = 0;
+      K.txt(svg, lw - 8, y + 16, g.k, { 'text-anchor': 'end' }); K.txt(svg, lw - 8, y + 28, `n = ${g.n}`, { 'text-anchor': 'end', class: 'muted', style: 'font-size:10px' });
+      g.share.forEach((s, j) => {
+        const x0 = sx(acc), x1 = sx(acc + s); acc += s;
+        const r = K.el('rect', { x: x0, y, width: Math.max(0, x1 - x0 - 2), height: 24, style: `fill:${OPC[j]}` }, svg);
+        if (x1 - x0 > 34) K.txt(svg, (x0 + x1) / 2, y + 16, Math.round(s * 100) + '%', { 'text-anchor': 'middle', style: `font-size:11px;fill:${K.seqTextColor([0.1, 0.3, 0.5, 0.72, 0.95][j])}` });
+        r.addEventListener('pointermove', e => K.tip(e, `${g.k}: ${OPS[j]}`, [{ value: (s * 100).toFixed(1) + '%', name: `${Math.round(s * g.n)} of ${g.n}`, color: OPC[j] }]));
+        r.addEventListener('pointerleave', K.hideTip);
+      });
+    });
+  }
+
+  // correlation grid
+  const E = D.employees, vars = Object.keys(E), short = v => v.replace('Annual ', '').replace(' Experience', ' exp.');
+  const corr = (a, b) => { const n = a.length, ma = a.reduce((s, v) => s + v) / n, mb = b.reduce((s, v) => s + v) / n; let sab = 0, saa = 0, sbb = 0; for (let i = 0; i < n; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; } return sab / Math.sqrt(saa * sbb); };
+  let pick = [vars.indexOf('Annual Salary'), vars.indexOf('Beta Experience')];
+  // diverging: blue for positive, orange for negative, neutral grey at zero
+  const div = r => { const a = Math.min(1, Math.abs(r)); return r >= 0 ? `color-mix(in srgb, var(--series-1) ${Math.round(a * 100)}%, var(--surface-2))` : `color-mix(in srgb, var(--series-2) ${Math.round(a * 100)}%, var(--surface-2))`; };
+  function heat() {
+    const box = document.getElementById('heat'); box.replaceChildren();
+    const W = box.clientWidth || 460, lw = 96, n = vars.length, cell = Math.min(58, (W - lw - 4) / n), H = n * cell + 70;
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Correlation heatmap' }, box);
+    vars.forEach((a, i) => {
+      K.txt(svg, lw - 6, 20 + i * cell + cell / 2, short(a), { 'text-anchor': 'end', style: 'font-size:11px' });
+      K.txt(svg, lw + i * cell + cell / 2, n * cell + 34, short(a), { 'text-anchor': 'end', transform: `rotate(-35 ${lw + i * cell + cell / 2} ${n * cell + 34})`, style: 'font-size:11px' });
+      vars.forEach((b, j) => {
+        const r = corr(E[a], E[b]), x = lw + j * cell, y = 20 + i * cell, on = (pick[0] === i && pick[1] === j) || (pick[0] === j && pick[1] === i);
+        const g = K.el('g', { style: 'cursor:pointer' }, svg);
+        K.el('rect', { x: x + 1, y: y + 1, width: cell - 2, height: cell - 2, rx: 4, style: `fill:${div(r)};stroke:${on ? 'var(--text-primary)' : 'none'};stroke-width:2` }, g);
+        K.txt(g, x + cell / 2, y + cell / 2 + 4, r.toFixed(2), { 'text-anchor': 'middle', style: `font-size:11px;fill:${Math.abs(r) > 0.55 ? '#fff' : 'var(--text-primary)'}` });
+        g.addEventListener('click', () => { if (i !== j) { pick = [i, j]; heat(); pair(); } });
+        g.addEventListener('pointermove', e => K.tip(e, `${a} vs ${b}`, [{ value: 'r = ' + r.toFixed(3), name: '' }]));
+        g.addEventListener('pointerleave', K.hideTip);
+      });
+    });
+  }
+  function pair() {
+    const a = vars[pick[1]], b = vars[pick[0]], x = E[a], y = E[b], r = corr(x, y);
+    document.getElementById('pairTitle').textContent = `${b} vs ${a}`;
+    document.getElementById('pairSub').textContent = `r = ${r.toFixed(3)}: ${Math.abs(r) > 0.7 ? 'strong' : Math.abs(r) > 0.4 ? 'moderate' : Math.abs(r) > 0.2 ? 'weak' : 'little or no'} ${r >= 0 ? 'positive' : 'negative'} linear relationship`;
+    const { svg, sx, sy, clipped, W } = U.plot(document.getElementById('pair'), { H: 320, x: U.domain(x), y: U.domain(y), xLabel: a, yLabel: b });
+    const n = x.length, mx = x.reduce((s, v) => s + v) / n, my = y.reduce((s, v) => s + v) / n;
+    const slope = x.reduce((s, v, i) => s + (v - mx) * (y[i] - my), 0) / x.reduce((s, v) => s + (v - mx) ** 2, 0);
+    const d = U.domain(x); K.el('line', { x1: sx(d[0]), y1: sy(my + slope * (d[0] - mx)), x2: sx(d[1]), y2: sy(my + slope * (d[1] - mx)), style: 'stroke:var(--text-primary);stroke-width:2' }, clipped);
+    x.forEach((v, i) => { const c = K.el('circle', { cx: sx(v) + (Math.random() - 0.5) * 3, cy: sy(y[i]), r: 0, style: 'fill:var(--series-1);opacity:.65' }, svg); K.animate(400 + i, t => c.setAttribute('r', 4 * t)); });
+  }
+
+  document.getElementById('grp').addEventListener('change', update);
+  update(); heat(); pair();
+  U.page(() => { drawCross(); heat(); pair(); });
+})();
+</script>
+</body>
+</html>

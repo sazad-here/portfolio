@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regression Lab · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  table.coef { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.coef td, table.coef th { padding: 6px 8px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; }
+  table.coef th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  table.coef td:first-child, table.coef th:first-child { text-align: left; }
+  .sig { color: var(--good); font-weight: 600; } .nsig { color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · regression</div>
+  <h1>📈 Regression Lab: What Really Drives the Number?</h1>
+  <p class="lede">Four real business datasets. Pick one and a predictor, and watch the least-squares line rotate into place from a flat guess. Slide the prediction marker to forecast, then check which predictors survive a significance test.</p>
+  <p class="how">Least squares fitted in your browser; coefficients, standard errors and p-values match Excel's Data Analysis → Regression output.</p>
+</header>
+
+<div class="layout wide-left">
+  <div class="panel">
+    <div class="controls">
+      <label>Dataset <select id="ds"></select></label>
+      <label>Predictor <select id="xv"></select></label>
+      <label><input type="checkbox" id="resid" checked> Show residuals</label>
+      <button class="btn primary" id="refit" type="button">▶ Fit the line</button>
+    </div>
+    <div class="sub" id="story"></div>
+    <div class="chart" id="scatter"></div>
+    <div id="predCtl"></div>
+  </div>
+  <aside class="stack">
+    <div class="panel"><div class="stats" id="stats"></div></div>
+    <div class="panel">
+      <h2>Using every predictor at once</h2>
+      <div class="sub" id="multiSub"></div>
+      <table class="coef" id="multi"></table>
+    </div>
+  </aside>
+</div>
+
+<div class="panel">
+  <h2>🚚 Is the effect real? Confidence intervals for truck maintenance</h2>
+  <div class="sub">Maintenance cost modelled on miles driven and truck age (n = 23, R² = 0.951). If a 95% interval includes zero, we can't rule out "no effect".</div>
+  <div id="ciCtl"></div>
+  <div class="layout" style="grid-template-columns:1fr 1fr;margin:0">
+    <div><div class="chart" id="ci0"></div></div>
+    <div><div class="chart" id="ci1"></div></div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Data: Cost of Power, Drugstore Sales, Overhead Costs and Bank Salaries (Albright, Business Analytics). Truck model coefficients and standard errors from the original regression output.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-math.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/regression.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, M = MdmMath, D = window.MODEL_DATA;
+  const dsSel = document.getElementById('ds'), xSel = document.getElementById('xv');
+  Object.entries(D.datasets).forEach(([k, d]) => K.html('option', { value: k, text: d.title }, dsSel));
+  let ds = 'power', xk = 'Units', shown = null, fit = null, predX = null, pred;
+  const label = (d, c) => (d.labels && d.labels[c]) || c;
+  const fmtY = (d, v) => (d.unit === '$' ? '$' : '') + U.compact(v);
+  const num = v => Math.abs(v) >= 100 ? v.toLocaleString('en-US', { maximumFractionDigits: 1 }) : +v.toPrecision(4) + '';
+
+  function setDataset() {
+    const d = D.datasets[ds]; xSel.replaceChildren();
+    d.xs.forEach(c => K.html('option', { value: c, text: label(d, c) }, xSel));
+    xk = d.xs[0]; xSel.value = xk;
+    document.getElementById('story').textContent = d.story;
+    multi(); simple(true);
+  }
+  function simple(animateIn) {
+    const d = D.datasets[ds], x = d.cols[xk], y = d.cols[d.y];
+    fit = M.ols(x.map(v => [v]), y);
+    const ybar = y.reduce((s, v) => s + v, 0) / y.length;
+    const target = { a: fit.beta[0], b: fit.beta[1] }, from = animateIn ? { a: ybar, b: 0 } : (shown || target);
+    const pc = document.getElementById('predCtl'); pc.replaceChildren();
+    const lo = Math.min(...x), hi = Math.max(...x); predX = (lo + hi) / 2;
+    pred = U.slider(pc, { name: `Predict ${d.y} when ${label(d, xk)} =`, min: lo, max: hi, step: (hi - lo) / 200, value: predX, fmt: v => U.compact(+v), onInput: v => { predX = v; draw(); } });
+    U.stat(document.getElementById('stats'), [
+      ['R²', fit.r2.toFixed(3), `${Math.round(fit.r2 * 100)}% of the variation explained`],
+      ['Slope', num(fit.beta[1]), `${d.y} per unit of ${label(d, xk)}`],
+      ['p-value of slope', fit.p[1] < 1e-4 ? fit.p[1].toExponential(1) : fit.p[1].toFixed(4), fit.p[1] < 0.05 ? 'significant at 5%' : 'not significant'],
+      ['Observations', String(fit.n)],
+    ]);
+    K.animate(K.reduced ? 0 : 1100, t => { shown = { a: K.lerp(from.a, target.a, t), b: K.lerp(from.b, target.b, t) }; draw(); });
+  }
+  function draw() {
+    const d = D.datasets[ds], x = d.cols[xk], y = d.cols[d.y], box = document.getElementById('scatter');
+    const xd = U.domain(x), yd = U.domain(y, 0.08);
+    const { svg, sx, sy, W, m, clipped } = U.plot(box, { H: 360, x: xd, y: yd, xLabel: label(d, xk), yLabel: d.y, yFmt: v => fmtY(d, v) });
+    const line = v => shown.a + shown.b * v;
+    if (document.getElementById('resid').checked) x.forEach((v, i) => K.el('line', { x1: sx(v), x2: sx(v), y1: sy(y[i]), y2: sy(line(v)), style: 'stroke:var(--series-2);opacity:.55' }, clipped));
+    x.forEach((v, i) => K.el('circle', { cx: sx(v), cy: sy(y[i]), r: 4.5, style: 'fill:var(--series-1);stroke:var(--surface-1);stroke-width:1.5' }, svg));
+    K.el('line', { x1: sx(xd[0]), y1: sy(line(xd[0])), x2: sx(xd[1]), y2: sy(line(xd[1])), style: 'stroke:var(--text-primary);stroke-width:2.5' }, clipped);
+    const py = line(predX);
+    K.el('line', { x1: sx(predX), x2: sx(predX), y1: sy(yd[0]), y2: sy(py), style: 'stroke:var(--series-4);stroke-width:1.5;stroke-dasharray:4 3' }, clipped);
+    K.el('circle', { cx: sx(predX), cy: sy(py), r: 7, style: 'fill:var(--series-4);stroke:var(--surface-1);stroke-width:2' }, svg);
+    K.txt(svg, sx(predX) + 10, sy(py) - 10, `predicted ${fmtY(d, py)}`, { class: 'val', style: 'paint-order:stroke;stroke:var(--surface-1);stroke-width:3px' });
+    K.txt(svg, m.l + 70, m.t + 12, `ŷ = ${num(shown.a)} ${shown.b >= 0 ? '+' : '−'} ${num(Math.abs(shown.b))}·x`, { class: 'val' });
+    const hit = K.el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: 360 - m.t - m.b, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', e => {
+      const r = svg.getBoundingClientRect(), px = e.clientX - r.left, py2 = e.clientY - r.top;
+      let k = -1, best = 22 ** 2; x.forEach((v, i) => { const dd = (sx(v) - px) ** 2 + (sy(y[i]) - py2) ** 2; if (dd < best) { best = dd; k = i; } });
+      if (k < 0) return K.hideTip();
+      K.tip(e, `Observation ${k + 1}`, [{ value: U.compact(x[k]), name: label(d, xk) }, { value: fmtY(d, y[k]), name: d.y }, { value: fmtY(d, y[k] - line(x[k])), name: 'residual' }]);
+    });
+    hit.addEventListener('pointerleave', K.hideTip);
+  }
+  function multi() {
+    const d = D.datasets[ds], X = d.cols[d.y].map((_, i) => d.xs.map(c => d.cols[c][i])), r = M.ols(X, d.cols[d.y]);
+    document.getElementById('multiSub').textContent = `R² = ${r.r2.toFixed(3)} · adjusted R² = ${r.adjR2.toFixed(3)} · green = significant at 5%`;
+    const T = document.getElementById('multi'); T.replaceChildren();
+    const h = K.html('tr', {}, T); ['Predictor', 'Coefficient', 'p-value'].forEach(x => K.html('th', { text: x }, h));
+    ['Intercept', ...d.xs].forEach((c, i) => {
+      const tr = K.html('tr', {}, T); K.html('td', { text: label(d, c) }, tr); K.html('td', { text: num(r.beta[i]) }, tr);
+      K.html('td', { text: r.p[i] < 1e-4 ? r.p[i].toExponential(1) : r.p[i].toFixed(4), className: i ? (r.p[i] < 0.05 ? 'sig' : 'nsig') : '' }, tr);
+    });
+  }
+
+  // truck confidence intervals
+  let conf = 95;
+  U.slider(document.getElementById('ciCtl'), { name: 'Confidence level', min: 80, max: 99.9, step: 0.1, value: 95, fmt: v => (+v).toFixed(1) + '%', onInput: v => { conf = v; ci(); } });
+  const ciShown = {};
+  function ci() {
+    const df = D.truck.n - 3, t = M.tinv(1 - (1 - conf / 100) / 2, df);
+    D.truck.coef.slice(1).forEach((c, i) => {
+      const lo = c.b - t * c.se, hi = c.b + t * c.se, box = document.getElementById('ci' + i), prev = ciShown[i] || [c.b, c.b];
+      K.animate(350, tt => {
+        const L = K.lerp(prev[0], lo, tt), H2 = K.lerp(prev[1], hi, tt); ciShown[i] = [L, H2];
+        const span = i ? [-30, 55] : [-0.01, 0.12];
+        const { svg, sx, sy, W } = U.plot(box, { H: 150, x: span, y: [0, 1], yTicks: [], xFmt: v => i ? v : v.toFixed(2), xLabel: c.name + (i ? ' ($ per year of age)' : ' ($ per mile)') });
+        K.el('line', { x1: sx(0), x2: sx(0), y1: 10, y2: 110, style: 'stroke:var(--text-primary);stroke-width:1.5;stroke-dasharray:4 3' }, svg);
+        K.txt(svg, sx(0) + 4, 108, 'zero', { class: 'muted' });
+        const includes = L <= 0 && H2 >= 0, col = includes ? 'var(--series-2)' : 'var(--series-3)';
+        K.el('rect', { x: sx(L), y: 52, width: Math.max(2, sx(H2) - sx(L)), height: 16, rx: 8, style: `fill:${col};opacity:.85` }, svg);
+        K.el('circle', { cx: sx(c.b), cy: 60, r: 6, style: 'fill:var(--text-primary);stroke:var(--surface-1);stroke-width:2' }, svg);
+        K.txt(svg, W / 2, 34, `${conf.toFixed(1)}% interval: ${L.toFixed(i ? 2 : 4)} to ${H2.toFixed(i ? 2 : 4)} → ${includes ? 'includes zero, not significant' : 'excludes zero, significant'}`, { 'text-anchor': 'middle', class: 'val' });
+      });
+    });
+  }
+
+  dsSel.addEventListener('change', () => { ds = dsSel.value; setDataset(); });
+  xSel.addEventListener('change', () => { xk = xSel.value; simple(true); });
+  document.getElementById('resid').addEventListener('change', draw);
+  document.getElementById('refit').addEventListener('click', () => simple(true));
+  setDataset(); ci();
+  U.page(() => { draw(); ci(); });
+})();
+</script>
+</body>
+</html>

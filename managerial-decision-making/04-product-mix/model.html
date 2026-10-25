@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8F%AD%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Mix Optimizer · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · linear programming</div>
+  <h1>🏭 Product Mix Optimizer</h1>
+  <p class="lede">How many computers of each kind should a plant build? Change the margins and the labour hours, and the optimiser re-solves instantly. Press <b>Find the optimum</b> to watch the profit line sweep across the feasible region until it touches the best corner.</p>
+  <p class="how">Same formulation as the original Excel Solver models; the in-browser solver reproduces Solver's answers exactly ($199,600, $615,812.50 and $1,535,562.50).</p>
+</header>
+
+<div class="layout">
+  <aside class="panel">
+    <h2>Two-product plan</h2>
+    <div class="sub">Basic and XP computers · max profit</div>
+    <div id="sliders"></div>
+    <div class="controls"><button class="btn primary" id="sweep" type="button">▶ Find the optimum</button><button class="btn" id="reset" type="button">Reset</button></div>
+  </aside>
+  <div class="stack">
+    <div class="panel"><div class="stats" id="stats"></div></div>
+    <div class="panel">
+      <h2>Feasible region</h2>
+      <div class="sub">Every point inside the shaded area is a plan the plant can actually make</div>
+      <div id="legend"></div>
+      <div class="chart" id="region"></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout" style="grid-template-columns:1fr 1fr">
+  <div class="panel">
+    <h2>Eight models, two test lines</h2>
+    <div class="sub" id="mix2sub">Optimal number of each model to build, by test line</div>
+    <div id="mix2ctl"></div>
+    <div id="mix2legend"></div>
+    <div class="chart" id="mix2"></div>
+  </div>
+  <div class="panel">
+    <h2>Six-month production plan</h2>
+    <div class="sub" id="plansub">Produce early when it's cheap, store it, ship it later</div>
+    <div id="planctl"></div>
+    <div id="planlegend"></div>
+    <div class="chart" id="plan"></div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Data: the product-mix and production-planning Solver workbooks. Profit, shadow prices and plans are recomputed in your browser with a simplex solver.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-math.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/optimization.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, M = MdmMath, D = window.MODEL_DATA, P = D.mix1;
+  const base = { mB: P.margin[0], mX: P.margin[1], asm: P.asmHours, test: P.testHours, sB: P.maxSales[0], sX: P.maxSales[1] };
+  let v = { ...base };
+  const model = () => ({ c: [v.mB, v.mX], A: [[P.asm[0], P.asm[1]], [P.test[0], P.test[1]], [1, 0], [0, 1]], b: [v.asm, v.test, v.sB, v.sX], types: ['<=', '<=', '<=', '<='] });
+  const box = document.getElementById('sliders'), S = {};
+  [['mB', 'Margin per Basic ($)', 20, 200, 1], ['mX', 'Margin per XP ($)', 20, 250, 1], ['asm', 'Assembly hours available', 4000, 16000, 100],
+   ['test', 'Testing hours available', 1000, 5000, 50], ['sB', 'Max Basic sales', 100, 1500, 10], ['sX', 'Max XP sales', 100, 2000, 10]]
+    .forEach(([k, name, min, max, step]) => S[k] = U.slider(box, { name, min, max, step, value: v[k], fmt: x => (k[0] === 'm' ? '$' : '') + (+x).toLocaleString(), onInput: x => { v[k] = x; update(); } }));
+  document.getElementById('reset').addEventListener('click', () => { v = { ...base }; Object.entries(S).forEach(([k, s]) => s.set(v[k])); update(); });
+
+  K.legend(document.getElementById('legend'), [['Feasible plans', 'color-mix(in srgb, var(--series-1) 18%, transparent)'], ['Optimal plan', 'var(--series-2)']], 'rect');
+  const reg = document.getElementById('region');
+  let shownOpt = null, sweepT = null;
+
+  // polygon of the feasible region: corners where two constraint lines meet and every constraint holds
+  function corners() {
+    const lines = [[P.asm[0], P.asm[1], v.asm], [P.test[0], P.test[1], v.test], [1, 0, v.sB], [0, 1, v.sX], [1, 0, 0], [0, 1, 0]];
+    const ok = (x, y) => x >= -1e-6 && y >= -1e-6 && P.asm[0] * x + P.asm[1] * y <= v.asm + 1e-6 && P.test[0] * x + P.test[1] * y <= v.test + 1e-6 && x <= v.sB + 1e-6 && y <= v.sX + 1e-6;
+    const pts = [];
+    for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) {
+      const [a1, b1, c1] = lines[i], [a2, b2, c2] = lines[j], det = a1 * b2 - a2 * b1;
+      if (Math.abs(det) < 1e-12) continue;
+      const x = (c1 * b2 - c2 * b1) / det, y = (a1 * c2 - a2 * c1) / det;
+      if (ok(x, y) && !pts.some(p => Math.abs(p[0] - x) < 1e-6 && Math.abs(p[1] - y) < 1e-6)) pts.push([x, y]);
+    }
+    const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length, cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+    return pts.sort((p, q) => Math.atan2(p[1] - cy, p[0] - cx) - Math.atan2(q[1] - cy, q[0] - cx));
+  }
+
+  function drawRegion(opt) {
+    const xmax = Math.max(v.sB, v.asm / P.asm[0]) * 1.08, ymax = Math.max(v.sX, v.test / P.test[1]) * 1.12;
+    const xm = Math.min(xmax, 3500), ym = Math.min(ymax, 3500);
+    const { svg, sx, sy, W, H, m, clipped } = U.plot(reg, { H: 380, x: [0, xm], y: [0, ym], xLabel: 'Basic computers built', yLabel: 'XP computers built' });
+    const clip = (a, b, c, label) => {   // draw constraint line a x + b y = c across the plot
+      const pts = [];
+      if (Math.abs(b) > 1e-9) { pts.push([0, c / b], [xm, (c - a * xm) / b]); } else pts.push([c / a, 0], [c / a, ym]);
+      K.el('line', { x1: sx(pts[0][0]), y1: sy(pts[0][1]), x2: sx(pts[1][0]), y2: sy(pts[1][1]), style: 'stroke:var(--axis);stroke-width:1.5' }, clipped);
+      const lx = Math.abs(b) > 1e-9 ? Math.min(xm * 0.82, (c - b * ym * 0.05) / (a || 1)) : c / a, ly = Math.abs(b) > 1e-9 ? (c - a * lx) / b : ym * 0.92;
+      if (lx > 0 && lx < xm && ly > 0 && ly < ym) K.txt(svg, sx(lx) + 4, sy(ly) - 6, label, { class: 'muted', style: 'font-size:11px' });
+    };
+    const poly = corners();
+    if (poly.length > 2) K.el('polygon', { points: poly.map(p => sx(p[0]) + ',' + sy(p[1])).join(' '), style: 'fill:color-mix(in srgb, var(--series-1) 18%, transparent);stroke:var(--series-1);stroke-width:1.5' }, svg);
+    clip(P.asm[0], P.asm[1], v.asm, 'assembly hours'); clip(P.test[0], P.test[1], v.test, 'testing hours');
+    clip(1, 0, v.sB, 'Basic demand'); clip(0, 1, v.sX, 'XP demand');
+    if (opt) {
+      // iso-profit line through the optimum (or part-way there while sweeping)
+      const z = sweepT == null ? opt.z : opt.z * sweepT;
+      const p1 = [0, z / v.mX], p2 = [z / v.mB, 0];
+      K.el('line', { x1: sx(p1[0]), y1: sy(p1[1]), x2: sx(p2[0]), y2: sy(p2[1]), style: 'stroke:var(--series-2);stroke-width:2;stroke-dasharray:6 4' }, clipped);
+      K.txt(svg, W - m.r, m.t + 14, `profit line: $${Math.round(z).toLocaleString()}`, { 'text-anchor': 'end', style: 'fill:var(--text-primary);font-weight:600' });
+      if (sweepT == null || sweepT >= 1) {
+        const [ox, oy] = shownOpt || opt.x;
+        K.el('circle', { cx: sx(ox), cy: sy(oy), r: 8, style: 'fill:var(--series-2);stroke:var(--surface-1);stroke-width:2.5' }, svg);
+        K.txt(svg, sx(ox) + 12, sy(oy) - 10, `${Math.round(ox)} Basic, ${Math.round(oy)} XP`, { class: 'val', style: 'paint-order:stroke;stroke:var(--surface-1);stroke-width:3px' });
+      }
+    }
+    poly.forEach(p => {
+      const hit = K.el('circle', { cx: sx(p[0]), cy: sy(p[1]), r: 10, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', e => K.tip(e, 'Corner of the region', [{ value: Math.round(p[0]) + ' Basic', name: '' }, { value: Math.round(p[1]) + ' XP', name: '' }, { value: U.money(v.mB * p[0] + v.mX * p[1]), name: 'profit' }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+  }
+
+  let cancelMove = () => {};
+  function update() {
+    const r = M.lp(model());
+    if (r.status !== 'optimal') { reg.textContent = 'No feasible plan with these settings.'; return; }
+    const sp = M.shadowPrices(model());
+    const binding = ['Assembly', 'Testing', 'Basic demand', 'XP demand'].filter((_, i) => sp[i] > 1e-6);
+    U.stat(document.getElementById('stats'), [
+      ['Maximum profit', U.money(r.z), r.z === P.solverProfit ? 'matches Excel Solver' : 'with your settings'],
+      ['Optimal plan', `${Math.round(r.x[0])} Basic · ${Math.round(r.x[1])} XP`],
+      ['Value of one more assembly hour', U.money(sp[0]), 'shadow price'],
+      ['Binding limits', binding.length ? String(binding.length) : 'none', binding.join(' · ')],
+    ]);
+    cancelMove(); const from = shownOpt || r.x;
+    cancelMove = K.animate(450, t => { shownOpt = [K.lerp(from[0], r.x[0], t), K.lerp(from[1], r.x[1], t)]; drawRegion(r); });
+    current = r;
+  }
+  let current = null;
+  document.getElementById('sweep').addEventListener('click', () => {
+    if (!current) return;
+    K.animate(1800, t => { sweepT = t; drawRegion(current); }, () => { sweepT = null; drawRegion(current); });
+  });
+
+  // ---------- eight models, two test lines ----------
+  const Q = D.mix2;
+  let price = 0, h = [...Q.hours];
+  const c2 = document.getElementById('mix2ctl');
+  U.slider(c2, { name: 'Change in all selling prices', min: -20, max: 20, value: 0, fmt: x => (x > 0 ? '+' : '') + x + '%', onInput: x => { price = x; mix2(); } });
+  U.slider(c2, { name: 'Assembly hours', min: 10000, max: 30000, step: 500, value: h[0], fmt: x => (+x).toLocaleString(), onInput: x => { h[0] = x; mix2(); } });
+  U.slider(c2, { name: 'Test line 1 hours', min: 2000, max: 9000, step: 100, value: h[1], fmt: x => (+x).toLocaleString(), onInput: x => { h[1] = x; mix2(); } });
+  K.legend(document.getElementById('mix2legend'), [['Tested on line 1', 'var(--series-1)'], ['Tested on line 2', 'var(--series-3)']], 'rect');
+  let shown2 = null, cancel2 = () => {};
+  function mix2() {
+    const n = Q.models.length, pr = Q.price.map(p => p * (1 + price / 100));
+    const m1 = pr.map((p, k) => p - Q.parts[k] - Q.costAsm * Q.asm[k] - Q.costT1 * Q.t1[k]);
+    const m2 = pr.map((p, k) => p - Q.parts[k] - Q.costAsm * Q.asm[k] - Q.costT2 * Q.t2[k]);
+    const A = [[...Q.asm, ...Q.asm], [...Q.t1, ...Q.t1.map(() => 0)], [...Q.t2.map(() => 0), ...Q.t2]];
+    Q.maxSales.forEach((_, k) => { const row = new Array(2 * n).fill(0); row[k] = row[k + n] = 1; A.push(row); });
+    const r = M.lp({ c: [...m1, ...m2], A, b: [...h, ...Q.maxSales], types: A.map(() => '<=') });
+    document.getElementById('mix2sub').textContent = `Optimal build by model and test line · profit ${U.money(r.z)}${Math.abs(r.z - Q.solverProfit) < 0.01 ? ' (matches Solver)' : ''}`;
+    const target = Q.models.map((_, k) => [r.x[k], r.x[k + n]]);
+    cancel2(); const from = shown2 || target.map(() => [0, 0]);
+    cancel2 = K.animate(500, t => { shown2 = target.map((p, k) => [K.lerp(from[k][0], p[0], t), K.lerp(from[k][1], p[1], t)]); draw2(); });
+  }
+  function draw2() {
+    const box = document.getElementById('mix2'), W = box.clientWidth || 500, H = 260;
+    const { svg, sx, sy, m } = U.plot(box, { W, H, x: [0, Q.models.length], y: [0, 1600], xTicks: [], yLabel: 'computers' });
+    const band = (W - m.l - m.r) / Q.models.length, bw = Math.min(30, band * 0.6);
+    shown2.forEach(([a, b], k) => {
+      const x = m.l + band * k + (band - bw) / 2;
+      K.el('rect', { x, y: sy(a), width: bw, height: Math.max(0, sy(0) - sy(a)), style: 'fill:var(--series-1)' }, svg);
+      K.el('rect', { x, y: sy(a + b), width: bw, height: Math.max(0, sy(a) - sy(a + b) - (a > 0 && b > 0 ? 2 : 0)), style: 'fill:var(--series-3)' }, svg);
+      K.el('line', { x1: x - 3, x2: x + bw + 3, y1: sy(Q.maxSales[k]), y2: sy(Q.maxSales[k]), style: 'stroke:var(--text-muted);stroke-width:1.5;stroke-dasharray:3 2' }, svg);
+      K.txt(svg, x + bw / 2, H - 24, Q.models[k].replace('Model ', 'M'), { 'text-anchor': 'middle' });
+      const hit = K.el('rect', { x: m.l + band * k, y: m.t, width: band, height: H - m.t - m.b, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', e => K.tip(e, Q.models[k], [{ value: Math.round(a), name: 'line 1', color: 'var(--series-1)' }, { value: Math.round(b), name: 'line 2', color: 'var(--series-3)' }, { value: Q.maxSales[k], name: 'max sales (dashed)' }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+  }
+
+  // ---------- six-month production plan ----------
+  const L = D.planning;
+  let cap = L.capacity[0], sto = L.storage[0];
+  const c3 = document.getElementById('planctl');
+  U.slider(c3, { name: 'Monthly production capacity', min: 20000, max: 45000, step: 500, value: cap, fmt: x => (+x).toLocaleString(), onInput: x => { cap = x; plan(); } });
+  U.slider(c3, { name: 'Storage capacity', min: 0, max: 30000, step: 500, value: sto, fmt: x => (+x).toLocaleString(), onInput: x => { sto = x; plan(); } });
+  K.legend(document.getElementById('planlegend'), [['Demand', 'var(--text-muted)'], ['Production', 'var(--series-1)'], ['Ending inventory', 'var(--series-4)']], 'rect');
+  let shown3 = null, cancel3 = () => {};
+  function plan() {
+    const T = L.cost.length, c = [...L.cost, ...L.cost.map(x => L.holdPct * x)], A = [], b = [], ty = [];
+    for (let t = 0; t < T; t++) {
+      const row = new Array(2 * T).fill(0); row[t] = 1; row[T + t] = -1; if (t) row[T + t - 1] = 1;
+      A.push(row); b.push(L.demand[t] - (t ? 0 : L.initial)); ty.push('=');
+      const r1 = new Array(2 * T).fill(0); r1[t] = 1; A.push(r1); b.push(cap); ty.push('<=');
+      const r2 = new Array(2 * T).fill(0); r2[T + t] = 1; A.push(r2); b.push(sto); ty.push('<=');
+    }
+    const r = M.lp({ c, A, b, types: ty, maximize: false });
+    const sub = document.getElementById('plansub');
+    if (r.status !== 'optimal') { sub.textContent = '⚠️ No feasible plan: demand cannot be met with these limits.'; return; }
+    sub.textContent = `Lowest total cost ${U.money(r.z)}${Math.abs(r.z - L.solverCost) < 0.01 ? ' (matches Solver)' : ''}`;
+    const target = L.demand.map((d, t) => [r.x[t], r.x[T + t]]);
+    cancel3(); const from = shown3 || target.map(() => [0, 0]);
+    cancel3 = K.animate(500, t => { shown3 = target.map((p, k) => [K.lerp(from[k][0], p[0], t), K.lerp(from[k][1], p[1], t)]); draw3(); });
+  }
+  function draw3() {
+    const box = document.getElementById('plan'), W = box.clientWidth || 500, H = 260, T = L.demand.length;
+    const { svg, sy, m } = U.plot(box, { W, H, x: [0, T], y: [0, 46000], xTicks: [], yLabel: 'units' });
+    const band = (W - m.l - m.r) / T, bw = Math.min(16, band * 0.25);
+    shown3.forEach(([p, inv], t) => {
+      const x0 = m.l + band * t + band / 2 - bw * 1.5 - 2;
+      [[L.demand[t], 'var(--text-muted)'], [p, 'var(--series-1)'], [inv, 'var(--series-4)']].forEach(([val, col], i) =>
+        K.el('rect', { x: x0 + i * (bw + 2), y: sy(val), width: bw, height: Math.max(0, sy(0) - sy(val)), rx: 2, style: `fill:${col}` }, svg));
+      K.txt(svg, m.l + band * t + band / 2, H - 24, 'Month ' + (t + 1), { 'text-anchor': 'middle', style: 'font-size:11px' });
+      const hit = K.el('rect', { x: m.l + band * t, y: m.t, width: band, height: H - m.t - m.b, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', e => K.tip(e, `Month ${t + 1} · $${L.cost[t]}/unit`, [{ value: L.demand[t].toLocaleString(), name: 'demand' }, { value: Math.round(p).toLocaleString(), name: 'produced', color: 'var(--series-1)' }, { value: Math.round(inv).toLocaleString(), name: 'ending inventory', color: 'var(--series-4)' }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+  }
+
+  update(); mix2(); plan();
+  U.page(() => { drawRegion(current); draw2(); draw3(); });
+})();
+</script>
+</body>
+</html>

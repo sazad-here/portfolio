@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%92%BC%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retirement Investment Case · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .toggles { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+  .toggles label { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+  .toggles input { accent-color: var(--series-1); }
+  table.coef { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.coef td, table.coef th { padding: 6px 8px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; }
+  table.coef th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  table.coef td:first-child, table.coef th:first-child { text-align: left; }
+  .sig { color: var(--good); font-weight: 600; } .nsig { color: var(--series-2); font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · multiple regression case study</div>
+  <h1>💼 What Makes a Couple Save for Retirement?</h1>
+  <p class="lede">194 couples, one question: what predicts the share of income they put into tax-deferred retirement plans? Toggle predictors in and out and the regression refits instantly. Drop the one that isn't pulling its weight, then plan for a couple of your own.</p>
+  <p class="how">Matches the team's Excel analysis: with all four predictors R² = 0.453 and Children is not significant (p = 0.954); dropping it leaves R² unchanged with F = 52.47.</p>
+</header>
+
+<div class="layout wide-left">
+  <div class="stack">
+    <div class="panel">
+      <h2>Predictors in the model</h2>
+      <div class="toggles" id="toggles"></div>
+      <div class="stats" id="fit"></div>
+    </div>
+    <div class="panel">
+      <h2>Coefficients</h2>
+      <div class="sub">Green = significant at 5% · orange = can be dropped</div>
+      <table class="coef" id="coef"></table>
+    </div>
+    <div class="panel">
+      <h2>Which predictor matters most?</h2>
+      <div class="sub">Standardised effect: change in % invested for a one-standard-deviation change in the predictor</div>
+      <div class="chart" id="effect"></div>
+    </div>
+  </div>
+  <aside class="stack">
+    <div class="panel">
+      <h2>Plan for a couple</h2>
+      <div id="planCtl"></div>
+      <div class="stat" style="margin-top:8px"><div class="label">Predicted share of income invested</div><div class="hero-num" id="pred">–</div><div class="note" id="predNote"></div></div>
+    </div>
+    <div class="panel">
+      <h2 id="scTitle">Salary vs % invested</h2>
+      <div class="controls"><label>Show <select id="scVar"></select></label></div>
+      <div class="chart" id="scatter"></div>
+    </div>
+  </aside>
+</div>
+</main>
+<footer class="wrap">Data: C09_04, 194 couples (children, salary, mortgage and debt in $1,000s; share of income invested). Team case study; regression fitted live in your browser.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-math.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/retirement.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, M = MdmMath, D = window.MODEL_DATA;
+  const VARS = ['Children', 'Salary (k)', 'Mortgage (k)', 'Debt (k)'], y = D.Invested;
+  const on = new Set(VARS);
+  const tg = document.getElementById('toggles');
+  VARS.forEach(v => { const l = K.html('label', {}, tg); const c = K.html('input', { type: 'checkbox', checked: true }, l); l.appendChild(document.createTextNode(v));
+    c.addEventListener('change', () => { c.checked ? on.add(v) : on.delete(v); if (!on.size) { on.add(v); c.checked = true; } refit(); }); });
+  const mean = a => a.reduce((s, v) => s + v, 0) / a.length, sd = a => { const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1)); };
+  const input = Object.fromEntries(VARS.map(v => [v, +mean(D[v]).toFixed(v === 'Children' ? 0 : 1)]));
+  const pc = document.getElementById('planCtl');
+  const RANGE = { 'Children': [0, 5, 1], 'Salary (k)': [40, 140, 1], 'Mortgage (k)': [0, 250, 1], 'Debt (k)': [0, 30, 0.5] };
+  VARS.forEach(v => U.slider(pc, { name: v.replace(' (k)', ' ($K)'), min: RANGE[v][0], max: RANGE[v][1], step: RANGE[v][2], value: input[v], fmt: x => v === 'Children' ? x : '$' + x + 'K', onInput: x => { input[v] = x; predict(); } }));
+  let model = null, cols = [];
+
+  function refit() {
+    cols = VARS.filter(v => on.has(v));
+    model = M.ols(y.map((_, i) => cols.map(v => D[v][i])), y);
+    U.stat(document.getElementById('fit'), [['R²', model.r2.toFixed(4)], ['Adjusted R²', model.adjR2.toFixed(4)], ['F statistic', model.F.toFixed(2), 'p = ' + model.pF.toExponential(2)], ['Couples', String(model.n)]]);
+    const T = document.getElementById('coef'); T.replaceChildren();
+    const h = K.html('tr', {}, T); ['Term', 'Coefficient', 'Std error', 't', 'p-value'].forEach(x => K.html('th', { text: x }, h));
+    ['Intercept', ...cols].forEach((c, i) => {
+      const tr = K.html('tr', {}, T);
+      [c, model.beta[i].toPrecision(4), model.se[i].toPrecision(4), model.t[i].toFixed(3), model.p[i] < 1e-4 ? model.p[i].toExponential(2) : model.p[i].toFixed(4)].forEach((x, k) =>
+        K.html('td', { text: x, className: k === 4 && i ? (model.p[i] < 0.05 ? 'sig' : 'nsig') : '' }, tr));
+    });
+    const eff = cols.map((c, i) => [c, model.beta[i + 1] * sd(D[c]) * 100]), lim = Math.max(...eff.map(e => Math.abs(e[1]))) * 1.15;
+    U.hbars(document.getElementById('effect'), eff,
+      { fmt: v => (v >= 0 ? '+' : '') + v.toFixed(2) + ' pts', colors: cols.map((c, i) => model.p[i + 1] < 0.05 ? 'var(--series-1)' : 'var(--series-2)'), labelW: 110, min: -lim, max: lim });
+    predict();
+  }
+  let shownP = null;
+  function predict() {
+    const v = model.beta[0] + cols.reduce((s, c, i) => s + model.beta[i + 1] * input[c], 0), from = shownP ?? v;
+    K.animate(350, t => { shownP = K.lerp(from, v, t); document.getElementById('pred').textContent = (shownP * 100).toFixed(1) + '%'; });
+    document.getElementById('predNote').textContent = `average couple in the data: ${(mean(y) * 100).toFixed(1)}% · ± ${(model.sePred * 100).toFixed(1)} pts typical error`;
+  }
+  const scSel = document.getElementById('scVar');
+  VARS.forEach(v => K.html('option', { value: v, text: v }, scSel)); scSel.value = 'Salary (k)';
+  function scatter() {
+    const v = scSel.value, x = D[v];
+    document.getElementById('scTitle').textContent = `${v.replace(' (k)', '')} vs % invested`;
+    const { svg, sx, sy, clipped } = U.plot(document.getElementById('scatter'), { H: 280, x: U.domain(x), y: U.domain(y), xLabel: v, yFmt: s => (s * 100).toFixed(0) + '%', yLabel: '% invested' });
+    const r = M.ols(x.map(a => [a]), y), d = U.domain(x);
+    K.el('line', { x1: sx(d[0]), y1: sy(r.beta[0] + r.beta[1] * d[0]), x2: sx(d[1]), y2: sy(r.beta[0] + r.beta[1] * d[1]), style: 'stroke:var(--text-primary);stroke-width:2' }, clipped);
+    x.forEach((a, i) => K.el('circle', { cx: sx(a) + (v === 'Children' ? (i % 7 - 3) * 1.5 : 0), cy: sy(y[i]), r: 3.5, style: 'fill:var(--series-1);opacity:.6' }, svg));
+  }
+  scSel.addEventListener('change', scatter);
+  refit(); scatter();
+  U.page(() => { refit(); scatter(); });
+})();
+</script>
+</body>
+</html>

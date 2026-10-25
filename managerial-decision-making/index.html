@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%A7%AE%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Managerial Decision Making · Interactive Portfolio</title>
+<link rel="stylesheet" href="assets/model-kit.css">
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 18px 0; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border-bottom: 1px solid var(--border); background: #fcfcfb; }
+  .card .body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .card h3 { margin: 0; font-size: 18px; font-weight: 650; }
+  .card p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+  .card .result { font-size: 13px; color: var(--text-primary); background: var(--accent-wash); border-radius: 8px; padding: 6px 10px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tags span { font-size: 11.5px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+  .card a.go { margin-top: auto; align-self: flex-start; background: var(--series-1); color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; padding: 7px 16px; border-radius: 999px; }
+  .card a.go:hover { filter: brightness(1.08); }
+  table.verify { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.verify td, table.verify th { padding: 7px 10px; border-bottom: 1px solid var(--grid); text-align: left; }
+  table.verify th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  table.verify td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .pipeline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; font-size: 14px; }
+  .pipeline .stage { background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; }
+  .pipeline .arrow { color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Managerial Decision Making · Project Portfolio</div>
+  <h1>🧮 Turning business questions into decisions</h1>
+  <p class="lede">Seven interactive models covering the full analyst toolkit: describe the data, find relationships, fit regressions, optimise plans, and decide under uncertainty. Each one runs on the real datasets and re-solves live as you change the inputs.</p>
+  <div class="pipeline">
+    <span class="stage">📊 Describe</span><span class="arrow">→</span><span class="stage">🔗 Relate</span><span class="arrow">→</span>
+    <span class="stage">📈 Model</span><span class="arrow">→</span><span class="stage">🏭 Optimise</span><span class="arrow">→</span><span class="stage">🎲 Decide</span>
+  </div>
+  <div class="stats" style="margin-top:18px">
+    <div class="stat"><div class="label">Interactive models</div><div class="value">7</div></div>
+    <div class="stat"><div class="label">Real datasets</div><div class="value">11</div><div class="note">up to 14,059 rows</div></div>
+    <div class="stat"><div class="label">Solver answers reproduced</div><div class="value">13 / 13</div><div class="note">by the in-browser engine</div></div>
+    <div class="stat"><div class="label">Tools</div><div class="value">Excel · Solver</div><div class="note">plus Python and JavaScript</div></div>
+  </div>
+</header>
+
+<div class="cards">
+  <article class="card"><a href="04-product-mix/model.html"><img src="assets/thumbs/04-product-mix.png" alt="Feasible region with optimal production plan" loading="lazy"></a><div class="body">
+    <h3>🏭 Product Mix Optimizer</h3>
+    <p>How many of each computer to build under labour and demand limits, plus an 8-model plan and a 6-month production schedule.</p>
+    <div class="result">Optimum: 560 Basic + 1,200 XP = <b>$199,600</b>; one more assembly hour is worth $16</div>
+    <div class="tags"><span>Linear programming</span><span>Shadow prices</span><span>Excel Solver</span></div>
+    <a class="go" href="04-product-mix/model.html">▶ Interactive model</a></div></article>
+
+  <article class="card"><a href="05-operations/model.html"><img src="assets/thumbs/05-operations.png" alt="Shipping network from plants to regions" loading="lazy"></a><div class="body">
+    <h3>🚚 Operations Optimizer</h3>
+    <p>Staff scheduling with whole-number workers, a plant-to-region shipping network, and a five-year investment plan.</p>
+    <div class="result">23 workers cover the week · shipping <b>$176,050</b> · $100K grows to <b>$286,792</b></div>
+    <div class="tags"><span>Integer programming</span><span>Transportation</span><span>Cash-flow planning</span></div>
+    <a class="go" href="05-operations/model.html">▶ Interactive model</a></div></article>
+
+  <article class="card"><a href="06-decision-lab/model.html"><img src="assets/thumbs/06-decision-lab.png" alt="EMV sensitivity to demand probability" loading="lazy"></a><div class="body">
+    <h3>🎲 Decision Lab</h3>
+    <p>A developer picks a project size before demand is known. Five decision rules, the value of a market forecast, and risk aversion.</p>
+    <div class="result">EMV picks Medium (<b>$434.75K</b>); the forecast is worth <b>$120.25K</b>; a risk-averse owner picks Small</div>
+    <div class="tags"><span>Decision analysis</span><span>Bayes' rule</span><span>Utility</span></div>
+    <a class="go" href="06-decision-lab/model.html">▶ Interactive model</a></div></article>
+
+  <article class="card"><a href="01-regression/model.html"><img src="assets/thumbs/01-regression.png" alt="Scatter plot with least-squares line" loading="lazy"></a><div class="body">
+    <h3>📈 Regression Lab</h3>
+    <p>Four business datasets with animated least-squares fits, predictions, multiple regression and confidence intervals.</p>
+    <div class="result">Power cost: R² = <b>0.736</b>, $30.53 per extra unit · truck age is <b>not</b> a significant cost driver</div>
+    <div class="tags"><span>Regression</span><span>Inference</span><span>Confidence intervals</span></div>
+    <a class="go" href="01-regression/model.html">▶ Interactive model</a></div></article>
+
+  <article class="card"><a href="07-retirement-case/model.html"><img src="assets/thumbs/07-retirement-case.png" alt="Standardised effect of each predictor" loading="lazy"></a><div class="body">
+    <h3>💼 Retirement Savings Case</h3>
+    <p>What predicts the share of income 194 couples invest for retirement? Toggle predictors and the model refits live.</p>
+    <div class="result">Salary raises saving, mortgage and debt lower it; children don't matter (p = <b>0.954</b>)</div>
+    <div class="tags"><span>Multiple regression</span><span>Model selection</span><span>Team project</span></div>
+    <a class="go" href="07-retirement-case/model.html">▶ Interactive model</a></div></article>
+
+  <article class="card"><a href="02-distributions/model.html"><img src="assets/thumbs/02-distributions.png" alt="Histogram of supermarket revenue" loading="lazy"></a><div class="body">
+    <h3>📊 Distribution Explorer</h3>
+    <p>Histograms, box plots and summary statistics for 14,059 supermarket transactions, 379 metro commutes and survey salaries.</p>
+    <div class="result">Revenue per transaction: mean <b>$13.00</b> vs median <b>$11.25</b>, a long right tail</div>
+    <div class="tags"><span>Descriptive statistics</span><span>Histograms</span><span>Skewness</span></div>
+    <a class="go" href="02-distributions/model.html">▶ Interactive model</a></div></article>
+
+  <article class="card"><a href="03-relationships/model.html"><img src="assets/thumbs/03-relationships.png" alt="Opinion mix by age group" loading="lazy"></a><div class="body">
+    <h3>🔗 Relationship Explorer</h3>
+    <p>Cross-tabulations of survey opinion by group and a clickable correlation grid of employee salary data.</p>
+    <div class="result">Salary tracks experience at the firm (r = <b>0.67</b>) more than education (r = 0.54)</div>
+    <div class="tags"><span>Pivot tables</span><span>Crosstabs</span><span>Correlation</span></div>
+    <a class="go" href="03-relationships/model.html">▶ Interactive model</a></div></article>
+</div>
+
+<div class="panel">
+  <h2>Verified against Excel Solver</h2>
+  <div class="sub">The models run a simplex / branch-and-bound engine and a least-squares engine written in JavaScript. At the original inputs they reproduce every answer from the Excel workbooks:</div>
+  <table class="verify">
+    <tr><th>Model</th><th>Excel answer</th><th>In-browser engine</th></tr>
+    <tr><td>Two-product mix: maximum profit</td><td class="n">$199,600</td><td class="n">$199,600 ✓</td></tr>
+    <tr><td>Eight-model mix: maximum profit</td><td class="n">$615,812.50</td><td class="n">$615,812.50 ✓</td></tr>
+    <tr><td>Six-month production plan: minimum cost</td><td class="n">$1,535,562.50</td><td class="n">$1,535,562.50 ✓</td></tr>
+    <tr><td>Shipping plan: minimum cost</td><td class="n">$176,050</td><td class="n">$176,050 ✓</td></tr>
+    <tr><td>Five-year investing: final cash</td><td class="n">$286,791.96</td><td class="n">$286,791.96 ✓</td></tr>
+    <tr><td>Staff scheduling: fewest workers</td><td class="n">23</td><td class="n">23 ✓</td></tr>
+    <tr><td>Retirement regression: R² / F</td><td class="n">0.4531 / 52.47</td><td class="n">0.4531 / 52.47 ✓</td></tr>
+  </table>
+</div>
+</main>
+<footer class="wrap">Datasets from Albright, Winston &amp; Zappe, <i>Business Analytics: Data Analysis and Decision Making</i>. Models and engine written for this portfolio.</footer>
+<script src="assets/model-kit.js"></script>
+<script>Kit.themeToggle(document.getElementById('theme'));</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distribution Explorer · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · descriptive statistics</div>
+  <h1>📊 Distribution Explorer</h1>
+  <p class="lede">Before modelling anything, look at the shape of the data. Pick a dataset, slide the number of bins and watch the histogram re-form. Mean and median markers show at a glance when a long tail is pulling the average away from the typical value.</p>
+  <p class="how">Supermarket data: 14,059 transactions · commute data: 379 U.S. metro areas · salaries: 400 survey respondents.</p>
+</header>
+
+<div class="layout wide-left">
+  <div class="panel">
+    <div class="controls">
+      <label>Dataset <select id="ds">
+        <option value="revenue">Supermarket revenue per transaction</option>
+        <option value="units">Supermarket units per transaction</option>
+        <option value="commute">Commute time by metro area</option>
+        <option value="salary">Survey salaries</option>
+      </select></label>
+      <label id="famWrap">Product family <select id="fam"></select></label>
+      <label id="genWrap">Shopper <select id="gen"><option value="-1">Everyone</option><option value="0">Women</option><option value="1">Men</option></select></label>
+    </div>
+    <div id="binCtl"></div>
+    <div id="legend"></div>
+    <div class="chart" id="hist"></div>
+    <div class="chart" id="box"></div>
+  </div>
+  <aside class="panel"><div class="stats" id="stats" style="grid-template-columns:1fr 1fr"></div></aside>
+</div>
+
+<div class="panel">
+  <h2>U.S. healthcare spending as a share of GDP</h2>
+  <div class="sub" id="hSub"></div>
+  <div id="tl"></div>
+  <div class="chart" id="health"></div>
+</div>
+</main>
+<footer class="wrap">Data: Supermarket Transactions, P02_06 (commute times), P02_03 (survey) and P02_20 (healthcare expenditure), from Albright, Business Analytics.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/distributions.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, D = window.MODEL_DATA, sm = D.supermarket;
+  const famSel = document.getElementById('fam');
+  K.html('option', { value: -1, text: 'All families' }, famSel);
+  sm.familyLevels.forEach((f, i) => K.html('option', { value: i, text: f }, famSel));
+  let ds = 'revenue', bins = 30, shownH = null;
+  const META = {
+    revenue: { label: 'Revenue per transaction ($)', fmt: v => '$' + v.toFixed(2) },
+    units: { label: 'Units sold per transaction', fmt: v => v.toFixed(2) },
+    commute: { label: 'Average one-way commute (minutes)', fmt: v => v.toFixed(1) + ' min' },
+    salary: { label: 'Annual salary ($)', fmt: v => '$' + Math.round(v).toLocaleString() },
+  };
+  const values = () => {
+    if (ds === 'commute') return D.commute.minutes;
+    if (ds === 'salary') return D.salary.salary;
+    const f = +famSel.value, g = +document.getElementById('gen').value, src = ds === 'revenue' ? sm.revenue : sm.units;
+    return src.filter((_, i) => (f < 0 || sm.family[i] === f) && (g < 0 || sm.gender[i] === g));
+  };
+  const binBox = document.getElementById('binCtl');
+  const binS = U.slider(binBox, { name: 'Number of bins', min: 4, max: 60, value: bins, onInput: v => { bins = v; update(); } });
+  K.legend(document.getElementById('legend'), [['Mean', 'var(--series-2)'], ['Median', 'var(--text-primary)']], 'line');
+
+  function quant(sorted, q) { const pos = (sorted.length - 1) * q, lo = Math.floor(pos); return sorted[lo] + (sorted[Math.min(sorted.length - 1, lo + 1)] - sorted[lo]) * (pos - lo); }
+  function update() {
+    const v = values(), s = [...v].sort((a, b) => a - b), n = v.length, f = META[ds].fmt;
+    document.getElementById('famWrap').style.display = document.getElementById('genWrap').style.display = ds === 'revenue' || ds === 'units' ? '' : 'none';
+    if (!n) return;
+    const mean = v.reduce((a, b) => a + b, 0) / n, sd = Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+    const skew = v.reduce((a, b) => a + ((b - mean) / sd) ** 3, 0) / n;
+    const st = { mean, median: quant(s, 0.5), q1: quant(s, 0.25), q3: quant(s, 0.75), min: s[0], max: s[n - 1] };
+    U.stat(document.getElementById('stats'), [['Observations', n.toLocaleString()], ['Mean', f(mean)], ['Median', f(st.median)], ['Std deviation', f(sd)],
+      ['Skewness', skew.toFixed(2), Math.abs(skew) < 0.5 ? 'roughly symmetric' : skew > 0 ? 'long right tail' : 'long left tail'], ['Middle 50%', `${f(st.q1)} – ${f(st.q3)}`],
+      ['Minimum', f(st.min)], ['Maximum', f(st.max)]]);
+    // bin counts on a fixed range so changing filters compares honestly
+    const lo = s[0], hi = s[n - 1] + 1e-9, w = (hi - lo) / bins;
+    const counts = new Array(bins).fill(0); v.forEach(x => counts[Math.min(bins - 1, Math.floor((x - lo) / w))]++);
+    const target = counts.map(c => c / n), from = shownH && shownH.length === bins ? shownH : target.map(() => 0);
+    K.animate(450, t => { shownH = target.map((c, i) => K.lerp(from[i], c, t)); draw(lo, w, st, n); });
+  }
+  function draw(lo, w, st, n) {
+    const box = document.getElementById('hist'), f = META[ds].fmt;
+    const top = Math.max(...shownH) * 1.15 || 1;
+    const { svg, sx, sy, m, H } = U.plot(box, { H: 320, x: [lo, lo + w * bins], y: [0, top], yFmt: v => (v * 100).toFixed(0) + '%', xLabel: META[ds].label, yLabel: 'share of observations' });
+    shownH.forEach((c, i) => {
+      const x0 = sx(lo + i * w), x1 = sx(lo + (i + 1) * w);
+      K.el('rect', { x: x0 + 1, y: sy(c), width: Math.max(1, x1 - x0 - 2), height: Math.max(0, sy(0) - sy(c)), rx: 2, style: 'fill:var(--series-1)' }, svg);
+      const hit = K.el('rect', { x: x0, y: m.t, width: x1 - x0, height: H - m.t - m.b, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', e => K.tip(e, `${f(lo + i * w)} – ${f(lo + (i + 1) * w)}`, [{ value: (c * 100).toFixed(1) + '%', name: `${Math.round(c * n).toLocaleString()} observations` }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+    [[st.mean, 'var(--series-2)', 'mean', ''], [st.median, 'var(--text-primary)', 'median', '4 3']].forEach(([v, c, name, dash], k) => {
+      K.el('line', { x1: sx(v), x2: sx(v), y1: m.t, y2: sy(0), style: `stroke:${c};stroke-width:2;stroke-dasharray:${dash}` }, svg);
+      K.txt(svg, sx(v) + (k ? -6 : 6), m.t + 12 + k * 14, `${name} ${f(v)}`, { 'text-anchor': k ? 'end' : 'start', class: 'val', style: 'paint-order:stroke;stroke:var(--surface-1);stroke-width:3px' });
+    });
+    // box plot strip on the same x scale
+    const bb = document.getElementById('box'); bb.replaceChildren();
+    const W = box.clientWidth || 600, bs = K.el('svg', { width: W, height: 46, role: 'img', 'aria-label': 'Box plot' }, bb);
+    K.el('line', { x1: sx(st.min), x2: sx(st.max), y1: 22, y2: 22, style: 'stroke:var(--axis);stroke-width:1.5' }, bs);
+    K.el('rect', { x: sx(st.q1), y: 10, width: Math.max(2, sx(st.q3) - sx(st.q1)), height: 24, rx: 4, style: 'fill:color-mix(in srgb, var(--series-1) 25%, transparent);stroke:var(--series-1)' }, bs);
+    K.el('line', { x1: sx(st.median), x2: sx(st.median), y1: 8, y2: 36, style: 'stroke:var(--text-primary);stroke-width:2.5' }, bs);
+    K.txt(bs, sx(st.min), 44, 'min', { 'text-anchor': 'middle', class: 'muted', style: 'font-size:10px' });
+    K.txt(bs, sx(st.max), 44, 'max', { 'text-anchor': 'middle', class: 'muted', style: 'font-size:10px' });
+  }
+
+  // healthcare spending over time
+  const Hd = D.health;
+  document.getElementById('hSub').textContent = `${(Hd.share[0] * 100).toFixed(1)}% in ${Hd.year[0]} → ${(Hd.share.at(-1) * 100).toFixed(1)}% in ${Hd.year.at(-1)} · press play to watch it climb`;
+  let hp = Hd.year.length - 1;
+  function drawHealth() {
+    const box = document.getElementById('health');
+    const { svg, sx, sy } = U.plot(box, { H: 240, x: [Hd.year[0], Hd.year.at(-1)], y: [0, Math.max(...Hd.share) * 1.15], yFmt: v => (v * 100).toFixed(0) + '%', xFmt: v => String(v) });
+    const k = Math.floor(hp), frac = hp - k, pts = Hd.share.slice(0, k + 1).map((v, i) => [Hd.year[i], v]);
+    if (k < Hd.year.length - 1) pts.push([K.lerp(Hd.year[k], Hd.year[k + 1], frac), K.lerp(Hd.share[k], Hd.share[k + 1], frac)]);
+    K.el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + sx(p[0]) + ',' + sy(p[1])).join(''), fill: 'none', style: 'stroke:var(--series-1);stroke-width:2.5' }, svg);
+    const end = pts.at(-1);
+    K.el('circle', { cx: sx(end[0]), cy: sy(end[1]), r: 5, style: 'fill:var(--series-1);stroke:var(--surface-1);stroke-width:2' }, svg);
+    K.txt(svg, sx(end[0]) - 8, sy(end[1]) - 10, (end[1] * 100).toFixed(1) + '%', { 'text-anchor': 'end', class: 'val' });
+  }
+  const tl = K.timeline(document.getElementById('tl'), { labels: Hd.year.map(String), speed: 9, onChange: p => { hp = p; drawHealth(); } });
+
+  ['ds', 'fam', 'gen'].forEach(id => document.getElementById(id).addEventListener('change', e => { if (id === 'ds') ds = e.target.value; shownH = null; update(); }));
+  update(); tl.set(Hd.year.length - 1);
+  U.page(() => { update(); drawHealth(); });
+})();
+</script>
+</body>
+</html>

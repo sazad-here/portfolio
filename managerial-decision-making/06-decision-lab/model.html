@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Lab · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  table.rules { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.rules td, table.rules th { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: left; }
+  table.rules th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  table.rules td.pick { font-weight: 700; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--accent-wash); font-weight: 600; }
+  table.payoff { border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  table.payoff td, table.payoff th { padding: 6px 10px; border: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; }
+  table.payoff th { color: var(--text-secondary); font-weight: 500; }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · decision analysis</div>
+  <h1>🎲 Decision Lab: How Big Should Morley Build?</h1>
+  <p class="lede">A developer must choose a small, medium or large project before knowing whether demand will be low, medium or high. Move the demand probabilities and watch every decision rule react. Then see what a market forecast is worth, and how a cautious owner chooses differently.</p>
+  <p class="how">Payoffs in $1,000s. Default probabilities, EMVs ($434.75K for Medium), the forecast's value (EVSI $120.25K) and the utility result (Small) all match the original workbook.</p>
+</header>
+
+<div class="layout">
+  <aside class="stack">
+    <div class="panel">
+      <h2>Demand probabilities</h2>
+      <div class="sub">Moving one rescales the others so they always add to 100%</div>
+      <div id="probs"></div>
+      <button class="btn" id="resetP" type="button">Reset to forecast-based estimates</button>
+    </div>
+    <div class="panel">
+      <h2>Payoffs ($1,000s)</h2>
+      <div style="overflow-x:auto"><table class="payoff" id="payoff"></table></div>
+    </div>
+  </aside>
+  <div class="stack">
+    <div class="panel">
+      <h2>Expected value of each option</h2>
+      <div class="sub">EMV = probability-weighted average payoff</div>
+      <div class="chart" id="emv"></div>
+    </div>
+    <div class="panel">
+      <h2>What each decision rule recommends</h2>
+      <div style="overflow-x:auto"><table class="rules" id="rules"></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout" style="grid-template-columns:1fr 1fr">
+  <div class="panel">
+    <h2>EMV as high demand becomes more likely</h2>
+    <div class="sub">Low and medium keep their relative weight · dashed line = current setting</div>
+    <div class="chart" id="sens"></div>
+  </div>
+  <div class="panel">
+    <h2>Risk attitude and the value of information</h2>
+    <div class="sub" id="riskSub"></div>
+    <div id="riskCtl"></div>
+    <div class="chart" id="eu"></div>
+    <div class="stats" id="info" style="margin-top:12px"></div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Data: the decision-analysis workbook (payoff table, joint forecast/demand probabilities, exponential utility with risk tolerance R). Everything is recomputed live, including Bayes' rule for the forecast.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/optimization.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, D = window.MODEL_DATA.decision;
+  const C = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'];
+  let p = [...D.prob], R = D.riskTolerance;
+  const pay = D.payoff, alts = D.alts, states = D.states;
+  const money = v => (v < 0 ? '−$' : '$') + Math.abs(+v.toFixed(2)) + 'K';
+
+  // payoff table
+  const pt = document.getElementById('payoff');
+  const hr = K.html('tr', {}, pt); K.html('th', { text: '' }, hr); states.forEach(s => K.html('th', { text: s + ' demand' }, hr));
+  alts.forEach((a, i) => { const tr = K.html('tr', {}, pt); K.html('th', { text: a, style: 'text-align:left' }, tr); pay[i].forEach(v => K.html('td', { text: v }, tr)); });
+
+  // probability sliders that stay normalised
+  const pb = document.getElementById('probs'), sl = [];
+  states.forEach((s, j) => sl.push(U.slider(pb, { name: `P(${s} demand)`, min: 0, max: 100, step: 0.25, value: +(p[j] * 100).toFixed(2), fmt: x => (+x).toFixed(1) + '%', onInput: x => setP(j, x / 100) })));
+  function setP(j, val) {
+    const rest = p.reduce((s, v, k) => k === j ? s : s + v, 0), left = 1 - val;
+    p = p.map((v, k) => k === j ? val : rest > 1e-9 ? v / rest * left : left / 2);
+    sl.forEach((s, k) => { if (k !== j) s.set((p[k] * 100).toFixed(2)); });
+    update();
+  }
+  document.getElementById('resetP').addEventListener('click', () => { p = [...D.prob]; sl.forEach((s, k) => s.set((p[k] * 100).toFixed(2))); update(); });
+
+  const emvOf = pr => pay.map(row => row.reduce((s, v, j) => s + v * pr[j], 0));
+  const argmax = a => a.indexOf(Math.max(...a)), argmin = a => a.indexOf(Math.min(...a));
+
+  function update() {
+    const emv = emvOf(p);
+    U.hbars(document.getElementById('emv'), alts.map((a, i) => [a, emv[i]]), { fmt: money, colors: C, labelW: 80, min: Math.min(0, ...emv), highlight: alts[argmax(emv)] });
+    const best = states.map((_, j) => Math.max(...pay.map(r => r[j])));
+    const regret = pay.map(r => r.map((v, j) => best[j] - v));
+    const rows = [
+      ['Maximin (pessimist)', 'best worst case', pay.map(r => Math.min(...r)), argmax],
+      ['Maximax (optimist)', 'best best case', pay.map(r => Math.max(...r)), argmax],
+      ['Minimax regret', 'smallest worst regret', regret.map(r => Math.max(...r)), argmin],
+      ['Expected value (EMV)', 'highest average', emv, argmax],
+      ['Expected opportunity loss', 'lowest average regret', regret.map(r => r.reduce((s, v, j) => s + v * p[j], 0)), argmin],
+    ];
+    const T = document.getElementById('rules'); T.replaceChildren();
+    const h = K.html('tr', {}, T); ['Rule', 'Picks', ...alts.map(a => a + ' score')].forEach(x => K.html('th', { text: x }, h));
+    rows.forEach(([name, note, sc, pick]) => {
+      const i = pick(sc), tr = K.html('tr', {}, T);
+      const td = K.html('td', {}, tr); K.html('div', { text: name }, td); K.html('div', { text: note, style: 'font-size:12px;color:var(--text-muted)' }, td);
+      const tp = K.html('td', {}, tr); K.html('span', { className: 'pill', text: alts[i] }, tp);
+      sc.forEach((v, k) => K.html('td', { text: money(v), className: k === i ? 'pick' : '' }, tr));
+    });
+    sens(); risk();
+  }
+
+  function sens() {
+    const box = document.getElementById('sens'), base = p[0] + p[1] || 1;
+    const { svg, sx, sy, W, H, m } = U.plot(box, { H: 260, x: [0, 1], y: [-450, 850], xFmt: v => Math.round(v * 100) + '%', yFmt: v => '$' + v + 'K', xLabel: 'P(High demand)' });
+    alts.forEach((a, i) => {
+      const pts = Array.from({ length: 41 }, (_, k) => { const h = k / 40, l = (1 - h) * p[0] / base, md = (1 - h) * p[1] / base; return [h, pay[i][0] * l + pay[i][1] * md + pay[i][2] * h]; });
+      K.el('path', { d: pts.map((q, k) => (k ? 'L' : 'M') + sx(q[0]) + ',' + sy(q[1])).join(''), fill: 'none', style: `stroke:${C[i]};stroke-width:2.5` }, svg);
+      K.txt(svg, sx(1) - 4, sy(pts[40][1]) + (a === 'Small' ? 16 : -6), a, { 'text-anchor': 'end', class: 'val' });
+    });
+    K.el('line', { x1: sx(p[2]), x2: sx(p[2]), y1: m.t, y2: H - m.b, style: 'stroke:var(--text-primary);stroke-dasharray:4 3' }, svg);
+  }
+
+  // risk tolerance + value of information
+  const rc = document.getElementById('riskCtl');
+  U.slider(rc, { name: 'Risk tolerance R ($1,000s)', min: 50, max: 2000, step: 10, value: R, fmt: x => '$' + x + 'K', onInput: x => { R = x; risk(); } });
+  function risk() {
+    const u = x => 1 - Math.exp(-x / R), eu = pay.map(row => row.reduce((s, v, j) => s + u(v) * p[j], 0));
+    const i = argmax(eu), emvPick = argmax(emvOf(p));
+    document.getElementById('riskSub').textContent = `Utility U(x) = 1 − e^(−x/R). At risk tolerance R = $${R}K the owner picks ${alts[i]}${i !== emvPick ? `, not the EMV choice (${alts[emvPick]}): avoiding a big loss outweighs the upside` : ', the same as the EMV choice'}. Lower R means more cautious.`;
+    U.hbars(document.getElementById('eu'), alts.map((a, k) => [a + ' (EU)', Math.max(eu[k], -2)]), { fmt: v => v <= -2 ? '< −2' : v.toFixed(3), colors: C, labelW: 100, min: -2, max: 1, highlight: alts[i] + ' (EU)' });
+    // Bayes: P(forecast | actual) from the joint table at the original prior, re-weighted by the current prior
+    const like = D.joint.map(row => row.map((v, j) => v / D.prob[j]));
+    let withInfo = 0;
+    D.forecasts.forEach((f, k) => {
+      const joint = states.map((_, j) => like[k][j] * p[j]), pf = joint.reduce((s, v) => s + v, 0);
+      if (pf < 1e-12) return;
+      withInfo += pf * Math.max(...emvOf(joint.map(v => v / pf)));
+    });
+    const without = Math.max(...emvOf(p)), perfect = states.reduce((s, _, j) => s + p[j] * Math.max(...pay.map(r => r[j])), 0);
+    U.stat(document.getElementById('info'), [
+      ['Value of the forecast (EVSI)', money(withInfo - without), 'the most worth paying for it'],
+      ['Value of perfect information', money(perfect - without), 'upper limit on any forecast'],
+    ]);
+  }
+
+  update();
+  U.page(update);
+})();
+</script>
+</body>
+</html>

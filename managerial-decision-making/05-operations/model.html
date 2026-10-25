@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%9A%9A%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Optimizer · Interactive model</title>
+<link rel="stylesheet" href="../assets/model-kit.css">
+<style>
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 8px 0 12px; }
+  .day { text-align: center; font-size: 12px; color: var(--text-secondary); }
+  .day input { width: 100%; text-align: center; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 5px 2px; font: inherit; font-size: 14px; font-weight: 600; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 900px) { .grid3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="tip" role="status" aria-live="polite"></div>
+<div class="topbar"><div class="wrap">
+  <a href="../index.html">← Decision Making portfolio</a><a href="../../index.html">All projects</a><span class="spacer"></span>
+  <button class="btn" id="theme" type="button">◐ Theme</button>
+</div></div>
+
+<main class="wrap">
+<header class="model-head">
+  <div class="eyebrow">Interactive model · optimisation</div>
+  <h1>🚚 Operations Optimizer</h1>
+  <p class="lede">Three everyday operations problems, each solved live in your browser: who to schedule, what to ship where, and how to invest cash over five years. Change any input and watch the optimal plan rebuild itself.</p>
+  <p class="how">Formulations match the original Excel Solver workbooks; at their default inputs the in-browser solver returns Solver's answers exactly: 23 workers, $176,050 and $286,792.</p>
+</header>
+
+<div class="panel" style="margin-top:18px">
+  <h2>👷 Staff scheduling</h2>
+  <div class="sub">Each worker works five days in a row, then has two off. Set how many are needed each day; the solver finds the smallest workforce (whole people) that covers every day.</div>
+  <div class="days" id="days"></div>
+  <div class="stats" id="schedStats"></div>
+  <div id="schedLegend" style="margin-top:10px"></div>
+  <div class="chart" id="sched"></div>
+</div>
+
+<div class="grid3">
+  <div class="panel">
+    <h2>🏭 Shipping plan</h2>
+    <div class="sub" id="trSub"></div>
+    <div id="trCtl"></div>
+    <div class="chart" id="network"></div>
+  </div>
+  <div class="panel">
+    <h2>💰 Five-year investment plan</h2>
+    <div class="sub" id="invSub"></div>
+    <div id="invCtl"></div>
+    <div id="invLegend"></div>
+    <div class="chart" id="invest"></div>
+    <div class="chart" id="investBars" style="margin-top:10px"></div>
+  </div>
+</div>
+</main>
+<footer class="wrap">Data: the worker-scheduling, transportation and investing Solver workbooks. Plans are recomputed with a simplex solver; scheduling adds branch-and-bound so every answer is a whole number of people.</footer>
+
+<script src="../assets/model-kit.js"></script>
+<script src="../assets/mdm-math.js"></script>
+<script src="../assets/mdm-ui.js"></script>
+<script src="../assets/models/optimization.js"></script>
+<script>
+(() => {
+  const K = Kit, U = Ui, M = MdmMath, D = window.MODEL_DATA;
+
+  // ---------- staff scheduling (integer programme) ----------
+  const S = D.scheduling, req = [...S.required];
+  const dayBox = document.getElementById('days');
+  S.days.forEach((d, i) => {
+    const w = K.html('label', { className: 'day' }, dayBox); w.appendChild(document.createTextNode(d));
+    const inp = K.html('input', { type: 'number', min: 0, max: 40, value: req[i] }, w); inp.setAttribute('aria-label', d + ' required');
+    inp.addEventListener('input', () => { req[i] = Math.max(0, Math.min(40, +inp.value || 0)); sched(); });
+  });
+  K.legend(document.getElementById('schedLegend'), [['Workers on duty', 'var(--series-1)'], ['Required', 'var(--text-primary)'], ['Starting their week that day', 'var(--series-4)']], 'rect');
+  let shownS = null, cancelS = () => {};
+  function sched() {
+    const A = req.map((_, day) => S.days.map((__, d) => ((day - d + 7) % 7) < 5 ? 1 : 0));
+    const r = M.ilp({ c: new Array(7).fill(1), A, b: req, types: req.map(() => '>='), maximize: false });
+    const starts = r.x.map(Math.round), duty = A.map(row => row.reduce((s, v, d) => s + v * starts[d], 0));
+    U.stat(document.getElementById('schedStats'), [
+      ['Smallest workforce', String(Math.round(r.z)), Math.round(r.z) === S.solverTotal && req.every((v, i) => v === S.required[i]) ? 'matches Excel Solver' : 'with your requirements'],
+      ['Idle capacity', String(duty.reduce((s, v, i) => s + v - req[i], 0)), 'worker-days above requirement'],
+      ['Busiest start day', S.days[starts.indexOf(Math.max(...starts))], Math.max(...starts) + ' workers start then'],
+    ]);
+    cancelS(); const from = shownS || { duty: duty.map(() => 0), starts: starts.map(() => 0) };
+    cancelS = K.animate(500, t => { shownS = { duty: duty.map((v, i) => K.lerp(from.duty[i], v, t)), starts: starts.map((v, i) => K.lerp(from.starts[i], v, t)) }; drawSched(); });
+  }
+  function drawSched() {
+    const box = document.getElementById('sched'), W = box.clientWidth || 900, H = 250;
+    const top = Math.max(10, ...req, ...shownS.duty) * 1.15;
+    const { svg, sy, m } = U.plot(box, { W, H, x: [0, 7], y: [0, top], xTicks: [], yLabel: 'workers' });
+    const band = (W - m.l - m.r) / 7, bw = Math.min(46, band * 0.42);
+    S.days.forEach((d, i) => {
+      const x = m.l + band * i + band / 2;
+      K.el('rect', { x: x - bw - 2, y: sy(shownS.duty[i]), width: bw, height: Math.max(0, sy(0) - sy(shownS.duty[i])), rx: 4, style: 'fill:var(--series-1)' }, svg);
+      K.el('rect', { x: x + 2, y: sy(shownS.starts[i]), width: bw * 0.7, height: Math.max(0, sy(0) - sy(shownS.starts[i])), rx: 4, style: 'fill:var(--series-4)' }, svg);
+      K.el('line', { x1: x - bw - 8, x2: x + 2, y1: sy(req[i]), y2: sy(req[i]), style: 'stroke:var(--text-primary);stroke-width:2.5' }, svg);
+      K.txt(svg, x - bw / 2 - 2, sy(shownS.duty[i]) - 6, Math.round(shownS.duty[i]), { 'text-anchor': 'middle', class: 'val' });
+      K.txt(svg, x, H - 24, d, { 'text-anchor': 'middle' });
+      const hit = K.el('rect', { x: m.l + band * i, y: m.t, width: band, height: H - m.t - m.b, fill: 'transparent' }, svg);
+      hit.addEventListener('pointermove', e => K.tip(e, d, [{ value: Math.round(shownS.duty[i]), name: 'on duty', color: 'var(--series-1)' }, { value: req[i], name: 'required' }, { value: Math.round(shownS.starts[i]), name: 'start their week', color: 'var(--series-4)' }]));
+      hit.addEventListener('pointerleave', K.hideTip);
+    });
+  }
+
+  // ---------- transportation network ----------
+  const T = D.transport, cap = [...T.capacity], dem = [...T.demand];
+  const trCtl = document.getElementById('trCtl');
+  T.regions.forEach((r, j) => U.slider(trCtl, { name: `${r} demand`, min: 0, max: 700, step: 10, value: dem[j], fmt: x => (+x).toLocaleString(), onInput: x => { dem[j] = x; ship(); } }));
+  U.slider(trCtl, { name: 'Plant 2 capacity', min: 0, max: 900, step: 10, value: cap[1], fmt: x => (+x).toLocaleString(), onInput: x => { cap[1] = x; ship(); } });
+  let shownT = null, cancelT = () => {};
+  function ship() {
+    const A = [], b = [], ty = [];
+    cap.forEach((v, i) => { const row = new Array(12).fill(0); for (let j = 0; j < 4; j++) row[i * 4 + j] = 1; A.push(row); b.push(v); ty.push('<='); });
+    dem.forEach((v, j) => { const row = new Array(12).fill(0); for (let i = 0; i < 3; i++) row[i * 4 + j] = 1; A.push(row); b.push(v); ty.push('>='); });
+    const r = M.lp({ c: T.cost.flat(), A, b, types: ty, maximize: false });
+    const sub = document.getElementById('trSub');
+    if (r.status !== 'optimal') { sub.textContent = `⚠️ Not enough capacity: demand ${dem.reduce((a, c) => a + c, 0).toLocaleString()} > capacity ${cap.reduce((a, c) => a + c, 0).toLocaleString()}`; return; }
+    sub.textContent = `Lowest shipping cost: ${U.money(r.z)}${Math.abs(r.z - T.solverCost) < 0.5 ? ' (matches Solver)' : ''} · line width = units shipped`;
+    cancelT(); const from = shownT || r.x.map(() => 0);
+    cancelT = K.animate(600, t => { shownT = r.x.map((v, k) => K.lerp(from[k], v, t)); drawNet(); });
+  }
+  function drawNet() {
+    const box = document.getElementById('network'); box.replaceChildren();
+    const W = box.clientWidth || 480, H = 300, xL = 90, xR = W - 100;
+    const svg = K.el('svg', { width: W, height: H, role: 'img', 'aria-label': 'Shipping network' }, box);
+    const yP = i => 50 + i * 100, yR = j => 30 + j * 80;
+    T.plants.forEach((p, i) => T.regions.forEach((rg, j) => {
+      const q = shownT[i * 4 + j]; if (q < 1) return;
+      const path = `M${xL},${yP(i)} C${(xL + xR) / 2},${yP(i)} ${(xL + xR) / 2},${yR(j)} ${xR},${yR(j)}`;
+      const el = K.el('path', { d: path, fill: 'none', style: `stroke:var(--series-1);stroke-width:${Math.max(1.5, q / 18)};opacity:.7;stroke-linecap:round` }, svg);
+      el.addEventListener('pointermove', e => K.tip(e, `${p} → ${rg}`, [{ value: Math.round(q).toLocaleString(), name: 'units' }, { value: '$' + T.cost[i][j], name: 'per unit' }, { value: U.money(q * T.cost[i][j]), name: 'cost' }]));
+      el.addEventListener('pointerleave', K.hideTip);
+    }));
+    T.plants.forEach((p, i) => {
+      const used = T.regions.reduce((s, _, j) => s + shownT[i * 4 + j], 0);
+      K.el('rect', { x: 6, y: yP(i) - 18, width: xL - 6, height: 36, rx: 8, style: 'fill:var(--surface-2);stroke:var(--border)' }, svg);
+      K.txt(svg, 14, yP(i) - 2, p, { class: 'val' }); K.txt(svg, 14, yP(i) + 12, `${Math.round(used)} / ${cap[i]}`, { class: 'muted', style: 'font-size:11px' });
+    });
+    T.regions.forEach((r, j) => {
+      K.el('rect', { x: xR, y: yR(j) - 18, width: 94, height: 36, rx: 8, style: 'fill:var(--surface-2);stroke:var(--border)' }, svg);
+      K.txt(svg, xR + 8, yR(j) - 2, r, { class: 'val' }); K.txt(svg, xR + 8, yR(j) + 12, `needs ${dem[j]}`, { class: 'muted', style: 'font-size:11px' });
+    });
+  }
+
+  // ---------- five-year investing ----------
+  const I = D.investing; let maxPer = I.maxPer, rate = I.cashRate;
+  const invCtl = document.getElementById('invCtl');
+  U.slider(invCtl, { name: 'Maximum in any one investment', min: 20000, max: 100000, step: 1000, value: maxPer, fmt: x => U.money(+x), onInput: x => { maxPer = x; invest(); } });
+  U.slider(invCtl, { name: 'Interest on idle cash', min: 0, max: 10, step: 0.5, value: rate * 100, fmt: x => (+x).toFixed(1) + '%', onInput: x => { rate = x / 100; invest(); } });
+  K.legend(document.getElementById('invLegend'), [['Cash on hand after investing', 'var(--series-1)']], 'line');
+  let shownI = null, cancelI = () => {};
+  function invest() {
+    const A = [], b = [], ty = [];
+    for (let t = 0; t < 4; t++) {
+      const row = new Array(9).fill(0);
+      for (let k = 0; k < 5; k++) row[k] = I.out[t][k] - I.ret[t][k];
+      row[5 + t] = 1; if (t) row[5 + t - 1] = -(1 + rate);
+      A.push(row); b.push(t ? 0 : I.initial); ty.push('=');
+    }
+    for (let k = 0; k < 5; k++) { const row = new Array(9).fill(0); row[k] = 1; A.push(row); b.push(maxPer); ty.push('<='); }
+    const r = M.lp({ c: [...I.ret[4], 0, 0, 0, 1 + rate], A, b, types: ty });
+    const cash = [...r.x.slice(5), r.z];
+    document.getElementById('invSub').textContent = `$100K grows to ${U.money(r.z)} by year 5${Math.abs(r.z - I.solverFinal) < 1 ? ' (matches Solver)' : ''}`;
+    cancelI(); const from = shownI || { cash: cash.map(() => 0), x: r.x.slice(0, 5).map(() => 0) };
+    cancelI = K.animate(550, t => { shownI = { cash: cash.map((v, i) => K.lerp(from.cash[i], v, t)), x: r.x.slice(0, 5).map((v, i) => K.lerp(from.x[i], v, t)) }; drawInv(); });
+  }
+  function drawInv() {
+    const box = document.getElementById('invest'), W = box.clientWidth || 480, H = 200;
+    const top = Math.max(300000, ...shownI.cash) * 1.1;
+    const { svg, sx, sy } = U.plot(box, { W, H, x: [1, 5], y: [0, top], xTicks: [1, 2, 3, 4, 5], xFmt: v => 'Year ' + v, yFmt: v => '$' + U.compact(v) });
+    K.el('path', { d: shownI.cash.map((v, i) => (i ? 'L' : 'M') + sx(i + 1) + ',' + sy(v)).join(''), fill: 'none', style: 'stroke:var(--series-1);stroke-width:2.5' }, svg);
+    shownI.cash.forEach((v, i) => {
+      K.el('circle', { cx: sx(i + 1), cy: sy(v), r: 4.5, style: 'fill:var(--series-1);stroke:var(--surface-1);stroke-width:2' }, svg);
+      if (i === 4) K.txt(svg, sx(i + 1) - 8, sy(v) - 8, U.money(v), { 'text-anchor': 'end', class: 'val' });
+    });
+    U.hbars(document.getElementById('investBars'), I.names.map((n, k) => ['Investment ' + n, shownI.x[k]]), { fmt: v => U.money(v), max: Math.max(maxPer, 1), labelW: 100, thick: 14, gap: 8 });
+  }
+
+  sched(); ship(); invest();
+  U.page(() => { drawSched(); drawNet(); drawInv(); });
+})();
+</script>
+</body>
+</html>
