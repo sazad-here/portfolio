@@ -37,7 +37,7 @@
          font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   a { color: var(--series-1); }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
-  header.hero { padding: 48px 0 24px; }
+  header.hero { padding: 20px 20px 8px; }
   .eyebrow { color: var(--text-secondary); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
   h1 { font-size: 34px; line-height: 1.15; margin: 6px 0 10px; font-weight: 650; }
   .lede { color: var(--text-secondary); max-width: 760px; margin: 0; }
@@ -111,29 +111,105 @@
   #tip .t-row strong { font-variant-numeric: tabular-nums; }
   #tip .t-row span.name { color: var(--text-secondary); }
   .hit:hover + .bar, .bar.on { filter: brightness(1.12); }
+  /* ---- portfolio cards (redesign) ---- */
+  .topline { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 0; font-size: 14px; }
+  .topline a { color: var(--text-secondary); text-decoration: none; } .topline a:hover { color: var(--text-primary); }
+  .pcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 22px 0 8px; }
+  .pcard { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .pcard img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border-bottom: 1px solid var(--border); background: #fcfcfb; }
+  .pcard .body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .pcard h3 { margin: 0; font-size: 18px; font-weight: 650; }
+  .pcard p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+  .pcard .result { font-size: 13px; color: var(--text-primary); background: var(--accent-wash); border-radius: 8px; padding: 6px 10px; }
+  .pcard .ptags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pcard .ptags span { font-size: 11.5px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+  .pcard .acts { margin-top: auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .pcard a.go { background: var(--series-1); color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; padding: 7px 16px; border-radius: 999px; }
+  .pcard a.go:hover { filter: brightness(1.08); }
+  .pcard a.more { font-size: 14px; color: var(--series-1); text-decoration: none; }
+  .verify { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 18px 0; }
+  .verify h2 { margin: 0 0 4px; font-size: 16px; }
+  .verify table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  .verify td, .verify th { padding: 7px 10px; border-bottom: 1px solid var(--grid); text-align: left; }
+  .verify th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  .verify td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .verify .scroll { overflow-x: auto; }
+  .deep { margin: 34px 0 0; }
+  .deep h2 { font-size: 24px; margin: 0 0 4px; }
+  .deep p { color: var(--text-secondary); margin: 0; }
 </style>
 </head>
 <body>
 <div id="tip" role="status" aria-live="polite"></div>
 
+<div class="wrap topline"><a href="../index.html">← All projects</a></div>
 <header class="hero wrap">
   <div class="eyebrow">Healthcare Analytics &amp; AI · Project Portfolio</div>
-  <h1>Healthcare Analytics &amp; AI: Interactive Portfolio</h1>
-  <p class="lede">Seven hands-on projects on real public-health and hospital data. Each one starts from a raw public dataset, gets extracted and cleaned, is analysed in Tableau, SAS Viya or Excel, and is checked number-by-number against the source. Hover any chart for exact values, or open a project's <b>▶ Interactive model</b> to play with it.</p>
+  <h1>🩺 Real health data, made explorable</h1>
+  <p class="lede">Seven projects on public-health and hospital data from the CDC, NCHS, California's HCAI and SAS. Each starts from a raw dataset, is cleaned and analysed in Tableau, SAS Viya or Excel, checked number by number against the source, and ends in a model you can play with.</p>
   <div class="pipeline" aria-label="Workflow">
-    <span class="stage">📥 Extract public data</span><span class="arrow">→</span>
-    <span class="stage">🧹 Clean with Python</span><span class="arrow">→</span>
-    <span class="stage">📊 Analyse in Tableau · SAS · Excel</span><span class="arrow">→</span>
-    <span class="stage">✅ Verify against source</span><span class="arrow">→</span>
-    <span class="stage">📝 Report findings</span>
+    <span class="stage">📥 Extract</span><span class="arrow">→</span><span class="stage">🧹 Clean</span><span class="arrow">→</span>
+    <span class="stage">📊 Analyse</span><span class="arrow">→</span><span class="stage">✅ Verify</span><span class="arrow">→</span><span class="stage">▶ Explore</span>
   </div>
   <div class="tiles">
-    <div class="tile"><div class="label">Projects</div><div class="value">7</div><div class="note">Excel · Tableau · SAS · Python</div></div>
+    <div class="tile"><div class="label">Interactive models</div><div class="value">7</div><div class="note">Excel · Tableau · SAS · Python</div></div>
     <div class="tile"><div class="label">Real datasets</div><div class="value">6</div><div class="note">CDC · NCHS · HCAI · GHI · SAS</div></div>
     <div class="tile"><div class="label">Records analysed</div><div class="value">~238K</div><div class="note">largest file: 12,477 columns</div></div>
-    <div class="tile"><div class="label">Analysis screenshots</div><div class="value">52</div><div class="note">Tableau · SAS · Excel</div></div>
+    <div class="tile"><div class="label">Figures verified</div><div class="value">43 / 44</div><div class="note">recomputed from the source data</div></div>
   </div>
 </header>
+
+<div class="wrap">
+<div class="pcards">
+  <article class="pcard"><a href="01-Hospital-Profit-DSS/model.html"><img src="assets/thumbs/01-Hospital-Profit-DSS.png" alt="Preview of the Hospital Profit Simulator model" loading="lazy"></a><div class="body">
+    <h3>💰 Hospital Profit Simulator</h3><p>An Excel decision-support model of hospital profit across five states. Ohio misses its target, so three plans are built to close the gap.</p><div class="result">Ohio lifted from <b>$479K to $959K</b> net income; three different plans clear the $850K target</div>
+    <div class="ptags"><span>Excel</span><span>Scenario modelling</span></div>
+    <div class="acts"><a class="go" href="01-Hospital-Profit-DSS/model.html">▶ Interactive model</a><a class="more" href="#profit">Findings ↓</a></div></div></article>
+  <article class="pcard"><a href="03-Causes-of-Death-Analysis/model.html"><img src="assets/thumbs/03-Causes-of-Death-Analysis.png" alt="Preview of the Causes of Death, 1999–2016 model" loading="lazy"></a><div class="body">
+    <h3>🩺 Causes of Death, 1999–2016</h3><p>Ten leading causes re-rank year by year for the U.S. or any state, by age-adjusted rate or by deaths.</p><div class="result">Heart disease <b>−38%</b>, Alzheimer's <b>+84%</b>; heart disease predicts overall mortality (r = 0.83)</div>
+    <div class="ptags"><span>Tableau</span><span>NCHS · 10,296 rows</span></div>
+    <div class="acts"><a class="go" href="03-Causes-of-Death-Analysis/model.html">▶ Interactive model</a><a class="more" href="#death">Findings ↓</a></div></div></article>
+  <article class="pcard"><a href="04-Obesity-Analysis/model.html"><img src="assets/thumbs/04-Obesity-Analysis.png" alt="Preview of the  U.S. Adult Obesity model" loading="lazy"></a><div class="body">
+    <h3>⚖️ U.S. Adult Obesity</h3><p>Hypothesis-driven analysis of a 110,880-row CDC survey: an animated state map, inactivity vs obesity, and the national trend.</p><div class="result">Obesity <b>27.4% to 33.1%</b>; the education gap (9.4 pts) is three times the income gap</div>
+    <div class="ptags"><span>Tableau</span><span>Python</span><span>CDC BRFSS</span></div>
+    <div class="acts"><a class="go" href="04-Obesity-Analysis/model.html">▶ Interactive model</a><a class="more" href="#obesity">Findings ↓</a></div></div></article>
+  <article class="pcard"><a href="06-BigOrganics-SAS-Analytics/model.html"><img src="assets/thumbs/06-BigOrganics-SAS-Analytics.png" alt="Preview of the Who Buys Organic? model" loading="lazy"></a><div class="body">
+    <h3>🛒 Who Buys Organic?</h3><p>The real SAS decision tree on 111,115 loyalty customers, with shoppers flowing through it and a customer builder.</p><div class="result">Best segment buys at <b>91.7%</b>, the largest at just 11%; age and affluence drive it</div>
+    <div class="ptags"><span>SAS Viya</span><span>Decision tree</span><span>Clustering</span></div>
+    <div class="acts"><a class="go" href="06-BigOrganics-SAS-Analytics/model.html">▶ Interactive model</a><a class="more" href="#organics">Findings ↓</a></div></div></article>
+  <article class="pcard"><a href="07-Hospital-Financial-Analysis/model.html"><img src="assets/thumbs/07-Hospital-Financial-Analysis.png" alt="Preview of the 444 Reports, 432 Hospitals model" loading="lazy"></a><div class="body">
+    <h3>🏥 444 Reports, 432 Hospitals</h3><p>California hospital finances with a guided tour of executive questions and an animation that merges duplicate filings.</p><div class="result"><b>112</b> hospitals at a loss and <b>225</b> non-profits, once duplicate filings are caught</div>
+    <div class="ptags"><span>Python</span><span>Excel</span><span>Data integrity</span></div>
+    <div class="acts"><a class="go" href="07-Hospital-Financial-Analysis/model.html">▶ Interactive model</a><a class="more" href="#hcai">Findings ↓</a></div></div></article>
+  <article class="pcard"><a href="08-Heart-Risk-Analysis/model.html"><img src="assets/thumbs/08-Heart-Risk-Analysis.png" alt="Preview of the  Heart Risk Tree model" loading="lazy"></a><div class="body">
+    <h3>❤️ Heart Risk Tree</h3><p>Walk a patient down the risk tree fitted on 5,209 Framingham patients, plus three patient profiles from k-means.</p><div class="result">Heart-disease share of deaths climbs <b>7% to 56%</b> down the riskiest path; heavy smokers die about 10 years earlier</div>
+    <div class="ptags"><span>SAS Viya</span><span>k-means</span><span>Decision tree</span></div>
+    <div class="acts"><a class="go" href="08-Heart-Risk-Analysis/model.html">▶ Interactive model</a><a class="more" href="#heart">Findings ↓</a></div></div></article>
+  <article class="pcard"><a href="02-Global-Hunger-Index/model.html"><img src="assets/thumbs/02-Global-Hunger-Index.png" alt="Preview of the Hunger Over Time model" loading="lazy"></a><div class="body">
+    <h3>🌍 Hunger Over Time</h3><p>All 130 countries in the Global Hunger Index animated from 1990 to 2014, Gapminder-style.</p><div class="result">Burundi's undernourishment rose from <b>44% to 67%</b> while most of the world improved</div>
+    <div class="ptags"><span>Tableau</span><span>130 countries</span></div>
+    <div class="acts"><a class="go" href="02-Global-Hunger-Index/model.html">▶ Interactive model</a><a class="more" href="#hunger">Findings ↓</a></div></div></article>
+</div>
+
+<div class="verify">
+  <h2>✅ Checked against the source</h2>
+  <p style="color:var(--text-secondary);margin:0;font-size:14px">Every headline number was recomputed from the raw data files, not copied from the reports. A few examples:</p>
+  <div class="scroll"><table>
+    <tr><th>Claim</th><th>Source</th><th>Recomputed</th></tr>
+    <tr><td>Heart disease vs all-cause mortality across states</td><td>NCHS, 2016</td><td class="n">r = 0.834 ✓</td></tr>
+    <tr><td>Alzheimer's age-adjusted death rate, 1999 → 2016</td><td>NCHS</td><td class="n">+83.6% ✓</td></tr>
+    <tr><td>Physical inactivity vs obesity across 49 states</td><td>CDC BRFSS, 2023</td><td class="n">r = 0.70 ✓</td></tr>
+    <tr><td>Hospital reports → unique facilities</td><td>HCAI disclosure file</td><td class="n">444 → 432 ✓</td></tr>
+    <tr><td>Best BigOrganics segment buy rate</td><td>SAS decision-tree export</td><td class="n">2,390 / 2,605 = 91.7% ✓</td></tr>
+    <tr><td>Ohio Plan B net income</td><td>Excel DSS model</td><td class="n">$959,145.04 ✓</td></tr>
+  </table></div>
+</div>
+
+<div class="deep">
+  <h2>Findings in depth</h2>
+  <p>The charts and screenshots behind each project. Hover any chart for exact values.</p>
+</div>
+</div>
 
 <nav class="tabs" aria-label="Projects">
   <div class="wrap"><div class="links">
