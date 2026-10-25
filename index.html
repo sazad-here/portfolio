@@ -4,97 +4,236 @@
 <meta charset="utf-8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Portfolio · Analytics, AI and Enterprise Systems</title>
+<title>Portfolio · Real data, turned into decisions</title>
+<meta name="description" content="Analytics, optimisation, AI and enterprise-systems projects built on real data. Every project ends in an interactive model.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: light; --page: #f9f9f7; --surface: #fcfcfb; --border: rgba(11,11,11,0.10);
-          --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --accent: #2a78d6; --wash: rgba(42,120,214,0.10); }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) { color-scheme: dark; --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255,255,255,0.10);
-          --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --accent: #3987e5; --wash: rgba(57,135,229,0.16); }
+  :root {
+    color-scheme: light;
+    --page: #f7f6f2; --surface: #fffefb; --surface-2: #f0eee8; --line: rgba(20,20,20,0.09);
+    --ink: #121212; --ink-2: #4d4b46; --muted: #8a877f;
+    --primary: #1f5fae; --primary-ink: #ffffff; --primary-wash: rgba(31,95,174,0.09);
+    --accent: #d9822b; --accent-wash: rgba(217,130,43,0.13);
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.06);
+    --shadow-hover: 0 2px 4px rgba(0,0,0,0.05), 0 18px 48px rgba(0,0,0,0.10);
+    --serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  :root[data-theme="dark"] { color-scheme: dark; --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255,255,255,0.10);
-          --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --accent: #3987e5; --wash: rgba(57,135,229,0.16); }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark; --page: #0f0f0e; --surface: #181816; --surface-2: #22221f; --line: rgba(255,255,255,0.09);
+      --ink: #f2f0ea; --ink-2: #c3c0b6; --muted: #8a877f; --primary: #5b9be8; --primary-ink: #0b1220; --primary-wash: rgba(91,155,232,0.14);
+      --accent: #e9a35a; --accent-wash: rgba(233,163,90,0.14); --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35); --shadow-hover: 0 2px 4px rgba(0,0,0,0.35), 0 18px 48px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark; --page: #0f0f0e; --surface: #181816; --surface-2: #22221f; --line: rgba(255,255,255,0.09);
+    --ink: #f2f0ea; --ink-2: #c3c0b6; --muted: #8a877f; --primary: #5b9be8; --primary-ink: #0b1220; --primary-wash: rgba(91,155,232,0.14);
+    --accent: #e9a35a; --accent-wash: rgba(233,163,90,0.14); --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35); --shadow-hover: 0 2px 4px rgba(0,0,0,0.35), 0 18px 48px rgba(0,0,0,0.5);
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-  .top { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 0; }
-  .btn { background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; text-decoration: none; }
-  .btn:hover { background: var(--wash); }
-  header { padding: 28px 0 10px; }
-  .eyebrow { color: var(--ink-2); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
-  h1 { font-size: 36px; line-height: 1.12; margin: 6px 0 10px; font-weight: 650; }
-  .lede { color: var(--ink-2); max-width: 720px; margin: 0; font-size: 16px; }
-  .skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
-  .skills span { font-size: 12px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; }
-  h2 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 36px 0 12px; font-weight: 600; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
-  .card .thumb { height: 170px; background: #fff; border-bottom: 1px solid var(--border); overflow: hidden; }
-  .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
-  .card .body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-  .card h3 { margin: 0; font-size: 18px; font-weight: 650; }
-  .card p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- nav ---------- */
+  .nav { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(1.4) blur(12px); background: color-mix(in srgb, var(--page) 78%, transparent); border-bottom: 1px solid transparent; transition: border-color .2s; }
+  .nav.scrolled { border-bottom-color: var(--line); }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
+  .brand { font-family: var(--serif); font-weight: 600; font-size: 20px; text-decoration: none; letter-spacing: -0.01em; }
+  .brand span { color: var(--accent); }
+  .navlinks { display: flex; gap: 22px; margin-left: auto; font-size: 14px; }
+  .navlinks a { text-decoration: none; color: var(--ink-2); transition: color .15s; }
+  .navlinks a:hover { color: var(--ink); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; display: grid; place-items: center; font-size: 15px; transition: transform .2s, background .2s; }
+  .icon-btn:hover { transform: rotate(20deg); background: var(--surface-2); }
+  @media (max-width: 720px) { .navlinks { display: none; } .nav .icon-btn { margin-left: auto; } }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; overflow: hidden; padding: 72px 0 88px; }
+  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  @media (max-width: 860px) { .hero canvas { display: none; } }
+  .hero .wrap { position: relative; }
+  .kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px 6px 10px; box-shadow: var(--shadow); }
+  .kicker .dot { width: 8px; height: 8px; border-radius: 50%; background: #2fa66a; box-shadow: 0 0 0 0 rgba(47,166,106,.5); animation: pulse 2.4s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(47,166,106,.45); } 70% { box-shadow: 0 0 0 10px rgba(47,166,106,0); } 100% { box-shadow: 0 0 0 0 rgba(47,166,106,0); } }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(42px, 6.4vw, 80px); line-height: 1.04; letter-spacing: -0.025em; margin: 22px 0 22px; max-width: 900px; }
+  h1 .rot { font-style: italic; color: var(--primary); background: linear-gradient(transparent 80%, var(--accent-wash) 80%, var(--accent-wash) 94%, transparent 94%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  h1 .rot.out { opacity: 0; transition: opacity .25s; }
+  h1 .rot.in { opacity: 1; transition: opacity .35s; }
+  .lede { font-size: clamp(17px, 1.6vw, 20px); color: var(--ink-2); max-width: 640px; margin: 0; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 999px; transition: transform .18s ease, box-shadow .18s ease, background .18s; }
+  .btn.primary { background: var(--ink); color: var(--page); box-shadow: var(--shadow); }
+  .btn.primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+  .btn.ghost { border: 1px solid var(--line); background: var(--surface); }
+  .btn.ghost:hover { transform: translateY(-2px); background: var(--surface-2); }
+
+  /* ---------- counters ---------- */
+  .counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; margin-top: 56px; box-shadow: var(--shadow); }
+  .counter { background: var(--surface); padding: 22px 24px; }
+  .counter .num { font-family: var(--serif); font-size: clamp(30px, 3.4vw, 42px); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .counter .lab { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+  @media (max-width: 720px) { .counters { grid-template-columns: 1fr 1fr; } }
+
+  /* ---------- sections ---------- */
+  section.block { padding: 96px 0 0; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 3.6vw, 44px); line-height: 1.12; letter-spacing: -0.02em; margin: 10px 0 12px; }
+  .sub { color: var(--ink-2); max-width: 620px; margin: 0; }
+
+  /* filters */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 24px; }
+  .chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); padding: 8px 16px; border-radius: 999px; font: 500 14px var(--sans); cursor: pointer; transition: all .18s; }
+  .chip:hover { color: var(--ink); }
+  .chip.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+
+  /* project cards: two features, then two regular */
+  .projects { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; }
+  .card { grid-column: span 3; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); transition: transform .25s ease, box-shadow .25s ease, opacity .3s ease; }
+  .card.feature { grid-column: span 3; }
+  .card.hidden { display: none; }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  .card .thumb { display: block; aspect-ratio: 16 / 9; overflow: hidden; background: #fcfcfb; border-bottom: 1px solid var(--line); position: relative; }
+  .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; transition: transform .6s ease; }
+  .card:hover .thumb img { transform: scale(1.04); }
+  .card .thumb.contain img { object-fit: contain; padding: 14px; background: #fff; }
+  .card .badge { position: absolute; top: 14px; left: 14px; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; }
+  .card .body { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .card .kind { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .card h3 { font-family: var(--serif); font-weight: 500; font-size: 26px; line-height: 1.15; margin: 0; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--ink-2); font-size: 15px; }
+  .card .hl { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card .hl div { font-size: 13px; color: var(--ink-2); }
+  .card .hl b { display: block; font-family: var(--serif); font-size: 22px; font-weight: 500; color: var(--ink); }
   .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tags span { font-size: 11.5px; color: var(--ink-2); background: var(--wash); border-radius: 999px; padding: 2px 9px; }
-  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 6px; }
-  .links a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; }
-  .links a.primary { background: var(--accent); color: #fff; font-weight: 600; }
-  .links a.secondary { color: var(--accent); border: 1px solid var(--border); }
-  .links a:hover { filter: brightness(1.08); }
-  .kind { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  .screener { font-size: 13px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .tags span { font-size: 12px; color: var(--ink-2); background: var(--surface-2); border-radius: 999px; padding: 3px 10px; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 6px; }
+  .links a { font-size: 14px; text-decoration: none; padding: 9px 16px; border-radius: 999px; font-weight: 600; transition: transform .18s, filter .18s; }
+  .links a.primary { background: var(--primary); color: var(--primary-ink); }
+  .links a.secondary { border: 1px solid var(--line); color: var(--ink); }
+  .links a:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .warn { font-size: 13px; color: var(--ink); background: var(--accent-wash); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 10px; padding: 9px 12px; }
+  .screener { font-size: 13px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
   .screener summary { cursor: pointer; color: var(--ink); font-weight: 600; }
   .screener p { margin: 6px 0 4px; font-size: 13px; }
   .screener ol { margin: 4px 0 0; padding-left: 18px; }
   .screener li { margin: 4px 0; }
   .screener b { color: var(--ink); }
-  .warn { font-size: 13px; color: var(--ink); background: rgba(237,161,0,0.14); border: 1px solid rgba(237,161,0,0.45); border-radius: 8px; padding: 8px 10px; }
-  footer { color: var(--muted); font-size: 13px; padding: 40px 0 60px; }
+  @media (max-width: 860px) { .card, .card.feature { grid-column: span 6; } }
+
+  /* model gallery marquee */
+  .gallery { margin-top: 30px; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+  .track { display: flex; gap: 16px; width: max-content; animation: marquee 70s linear infinite; padding: 6px 0 14px; }
+  .gallery:hover .track, .gallery:focus-within .track { animation-play-state: paused; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+  .tile { width: 290px; flex: none; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s; }
+  .tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  .tile img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; display: block; background: #fcfcfb; border-bottom: 1px solid var(--line); }
+  .tile .t { padding: 12px 14px; font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+  .tile .t span { color: var(--muted); font-weight: 500; font-size: 12px; }
+
+  /* process */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 34px; counter-reset: step; }
+  .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); }
+  .step::before { counter-increment: step; content: "0" counter(step); font-family: var(--serif); font-size: 15px; color: var(--accent); display: block; margin-bottom: 18px; }
+  .step h3 { font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 0 0 6px; }
+  .step p { margin: 0; color: var(--ink-2); font-size: 15px; }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+  .tools span { font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; transition: transform .15s, border-color .15s; }
+  .tools span:hover { transform: translateY(-2px); border-color: var(--primary); }
+
+  /* closing */
+  .closing { margin: 110px 0 0; background: var(--ink); color: var(--page); border-radius: 28px; padding: 56px 48px; position: relative; overflow: hidden; }
+  .closing::after { content: ""; position: absolute; right: -80px; top: -80px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%); opacity: .6; }
+  .closing h2 { color: var(--page); margin-top: 0; max-width: 620px; }
+  .closing p { color: color-mix(in srgb, var(--page) 75%, transparent); max-width: 560px; margin: 0 0 26px; }
+  .closing .btn.primary { background: var(--page); color: var(--ink); }
+  .closing .btn.ghost { background: transparent; border-color: color-mix(in srgb, var(--page) 30%, transparent); color: var(--page); }
+  footer { color: var(--muted); font-size: 13px; padding: 36px 0 56px; }
+
+  /* reveal on scroll */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.shown { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    *, .reveal { transition: none !important; animation: none !important; }
+    .reveal { opacity: 1; transform: none; }
+    .gallery { overflow-x: auto; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <a class="btn" href="https://github.com/sazad-here">GitHub</a>
-    <a class="btn" href="https://www.linkedin.com/in/shakila-azad2005/">LinkedIn</a>
-    <button class="btn" id="theme" type="button">◐ Theme</button>
-  </div>
-  <header>
-    <div class="eyebrow">Portfolio · MS Management Information Systems</div>
-    <h1>Analytics, AI and enterprise systems, built on real data</h1>
-    <p class="lede">Interactive models, research prototypes and enterprise-systems analysis. Each project starts from real data, gets cleaned and checked, and ends in something you can explore.</p>
-    <div class="skills"><span>Python</span><span>SQL</span><span>Excel Solver</span><span>Tableau</span><span>SAS Viya</span><span>Excel</span><span>SAP S/4HANA</span><span>LightGBM</span><span>Data visualization</span></div>
-  </header>
+<nav class="nav" id="nav"><div class="wrap">
+  <a class="brand" href="#top">Portfolio<span>.</span></a>
+  <div class="navlinks"><a href="#projects">Projects</a><a href="#models">Models</a><a href="#approach">Approach</a><a href="https://github.com/sazad-here">GitHub</a><a href="https://www.linkedin.com/in/shakila-azad2005/">LinkedIn</a></div>
+  <button class="icon-btn" id="theme" type="button" aria-label="Toggle dark mode">◐</button>
+</div></nav>
 
-  <h2>Projects</h2>
-  <div class="cards">
-    <article class="card">
-      <a class="thumb" href="healthcare-analytics/"><img src="healthcare-analytics/04-Obesity-Analysis/screenshots/08-dashboard.png" alt="Tableau dashboard of U.S. adult obesity by state, trend and region"></a>
+<header class="hero" id="top">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <span class="kicker reveal"><span class="dot"></span>MS Management Information Systems · analytics, optimisation &amp; AI</span>
+    <h1 class="reveal">Real data, turned into <span class="rot in" id="rot">decisions you can play with</span>.</h1>
+    <p class="lede reveal">Every project here starts with a messy real-world dataset and ends in a live, interactive model. Drag a slider, change an assumption, and watch the answer change.</p>
+    <div class="cta reveal">
+      <a class="btn primary" href="#projects">Explore the projects ↓</a>
+      <a class="btn ghost" href="#models">▶ Jump into a model</a>
+    </div>
+    <div class="counters reveal" id="counters">
+      <div class="counter"><div class="num" data-to="4">0</div><div class="lab">projects</div></div>
+      <div class="counter"><div class="num" data-to="14">0</div><div class="lab">interactive models</div></div>
+      <div class="counter"><div class="num" data-to="17" data-suffix="+">0</div><div class="lab">real datasets</div></div>
+      <div class="counter"><div class="num" data-to="250" data-suffix="K+">0</div><div class="lab">records analysed</div></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<section class="block" id="projects">
+  <div class="reveal"><div class="eyebrow">Selected work</div><h2>Projects</h2><p class="sub">Two interactive portfolios, a live behavioural-research platform and an enterprise-systems analysis.</p></div>
+  <div class="filters reveal" role="group" aria-label="Filter projects">
+    <button class="chip on" data-f="all" type="button">All</button>
+    <button class="chip" data-f="analytics" type="button">Analytics</button>
+    <button class="chip" data-f="optimisation" type="button">Optimisation</button>
+    <button class="chip" data-f="ai" type="button">AI &amp; ML</button>
+    <button class="chip" data-f="enterprise" type="button">Enterprise systems</button>
+  </div>
+  <div class="projects">
+    <article class="card feature reveal" data-tags="analytics ai">
+      <a class="thumb" href="healthcare-analytics/"><img src="healthcare-analytics/assets/thumbs/04-Obesity-Analysis.png" alt="Animated map of U.S. adult obesity by state"><span class="badge">7 interactive models</span></a>
       <div class="body">
-        <div class="kind">Interactive portfolio · 7 projects</div>
+        <div class="kind">Interactive portfolio</div>
         <h3>Healthcare Analytics &amp; AI</h3>
-        <p>Seven animated models built from CDC, NCHS, California hospital and SAS data: a profit simulator, a causes-of-death race, an obesity map, a live decision tree and more.</p>
+        <p>CDC, NCHS and California hospital data turned into a causes-of-death race, an animated obesity map, a live SAS decision tree and more.</p>
+        <div class="hl"><div><b>444 → 432</b>hospital filings deduplicated</div><div><b>r = 0.83</b>heart disease vs mortality</div></div>
         <div class="tags"><span>Tableau</span><span>SAS Viya</span><span>Excel</span><span>Python</span></div>
         <div class="links"><a class="primary" href="healthcare-analytics/">▶ Explore the models</a></div>
       </div>
     </article>
-    <article class="card">
-      <a class="thumb" href="managerial-decision-making/"><img src="managerial-decision-making/assets/thumbs/04-product-mix.png" alt="Feasible region of a product-mix optimisation"></a>
+    <article class="card feature reveal" data-tags="optimisation analytics">
+      <a class="thumb" href="managerial-decision-making/"><img src="managerial-decision-making/assets/thumbs/04-product-mix.png" alt="Feasible region of a product-mix optimisation"><span class="badge">7 interactive models</span></a>
       <div class="body">
-        <div class="kind">Interactive portfolio · 7 models</div>
+        <div class="kind">Interactive portfolio</div>
         <h3>Managerial Decision Making</h3>
-        <p>Regression, distributions, optimisation and decision analysis as live models: a product-mix optimiser, a shipping network, a decision lab and more, all re-solving as you change the inputs.</p>
+        <p>Optimisation and decision models that re-solve live in the browser: product mix, shipping, staffing, investing, and decisions under uncertainty.</p>
+        <div class="hl"><div><b>13 / 13</b>Excel Solver answers reproduced</div><div><b>$199,600</b>optimal product-mix profit</div></div>
         <div class="tags"><span>Excel Solver</span><span>Linear programming</span><span>Regression</span><span>Decision analysis</span></div>
         <div class="links"><a class="primary" href="managerial-decision-making/">▶ Explore the models</a></div>
       </div>
     </article>
-    <article class="card">
-      <a class="thumb" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption"><img src="reliance-under-disruption/figures/paper/Fig00_model_pipeline.png" alt="Model pipeline diagram for the reliance study"></a>
+    <article class="card reveal" data-tags="ai analytics">
+      <a class="thumb contain" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption"><img src="reliance-under-disruption/figures/paper/Fig00_model_pipeline.png" alt="Model pipeline diagram for the reliance study"><span class="badge">Live study</span></a>
       <div class="body">
         <div class="kind">Research prototype · ongoing</div>
         <h3>Reliance Under Disruption</h3>
-        <p>Does trust in AI advice depend on where its errors fall? A 30-week warehouse simulation with a calibrated LightGBM stockout-risk model (AUROC 0.897), deployed as a live study.</p>
-        <div class="tags"><span>Python</span><span>LightGBM</span><span>Behavioral research</span><span>Render + Postgres</span></div>
+        <p>Does trust in AI advice depend on where its errors fall? A 30-week warehouse simulation with a calibrated LightGBM stockout-risk model, deployed as a live study.</p>
+        <div class="hl"><div><b>0.897</b>model AUROC</div><div><b>30 weeks</b>simulated per participant</div></div>
+        <div class="tags"><span>Python</span><span>LightGBM</span><span>Behavioural research</span><span>Render + Postgres</span></div>
         <div class="warn" role="note">⚠️ <b>Live research study.</b> Starting a session adds a real response to the study data. Please take part only if you mean to.</div>
         <details class="screener">
           <summary>Numeracy screener answers</summary>
@@ -108,30 +247,165 @@
         <div class="links"><a class="primary live-study" href="https://reliance-study.onrender.com" target="_blank" rel="noopener">▶ Open the live study</a><a class="secondary" href="https://github.com/sazad-here/portfolio/tree/main/reliance-under-disruption">Read the project</a></div>
       </div>
     </article>
-    <article class="card">
-      <a class="thumb" href="https://github.com/sazad-here/portfolio/tree/main/intelligent-enterprise-systems"><img src="intelligent-enterprise-systems/01-order-to-cash-analytics/charts/01-concentration-inversion.png" alt="Order-to-cash customer concentration chart"></a>
+    <article class="card reveal" data-tags="enterprise analytics">
+      <a class="thumb contain" href="https://github.com/sazad-here/portfolio/tree/main/intelligent-enterprise-systems"><img src="intelligent-enterprise-systems/01-order-to-cash-analytics/charts/01-concentration-inversion.png" alt="Order-to-cash customer concentration chart"><span class="badge">SAP S/4HANA</span></a>
       <div class="body">
         <div class="kind">Enterprise systems analysis</div>
         <h3>Intelligent Enterprise Systems</h3>
-        <p>SQL analysis of 708 SAP S/4HANA sales orders, regression modelling, and end-to-end process documentation across order-to-cash, procure-to-pay, production and finance.</p>
+        <p>SQL analysis of SAP S/4HANA sales orders, regression modelling, and end-to-end process documentation across order-to-cash, procure-to-pay, production and finance.</p>
+        <div class="hl"><div><b>708</b>sales orders analysed</div><div><b>5</b>business process cycles</div></div>
         <div class="tags"><span>SAP S/4HANA</span><span>SQL</span><span>Regression</span><span>ERPsim</span></div>
         <div class="links"><a class="primary" href="https://github.com/sazad-here/portfolio/tree/main/intelligent-enterprise-systems">Read the project</a></div>
       </div>
     </article>
   </div>
-  <footer>Built from real datasets. Every number shown was checked against its source.</footer>
-</div>
+</section>
+
+<section class="block" id="models">
+  <div class="reveal"><div class="eyebrow">Hands-on</div><h2>Fourteen models you can play with</h2><p class="sub">Each one runs on real data and responds as you change it. Hover to pause, click to open.</p></div>
+</section>
+</main>
+<div class="gallery reveal" id="gallery"><div class="track" id="track"></div></div>
+
+<main class="wrap">
+<section class="block" id="approach">
+  <div class="reveal"><div class="eyebrow">Approach</div><h2>How every project is built</h2></div>
+  <div class="steps">
+    <div class="step reveal"><h3>Find real data</h3><p>Public health records, hospital filings, survey data and ERP transactions, never toy examples.</p></div>
+    <div class="step reveal"><h3>Clean it honestly</h3><p>Duplicates, gaps and suppressed values are handled explicitly and documented, not hidden.</p></div>
+    <div class="step reveal"><h3>Model the question</h3><p>Regression, optimisation, decision trees and clustering, chosen for the decision at hand.</p></div>
+    <div class="step reveal"><h3>Verify, then share</h3><p>Every headline number is recomputed from the source, then published as something people can explore.</p></div>
+  </div>
+  <div class="tools reveal"><span>Python · pandas</span><span>SQL</span><span>Excel &amp; Solver</span><span>Tableau</span><span>SAS Viya</span><span>SAP S/4HANA</span><span>LightGBM</span><span>JavaScript</span><span>Data visualisation</span><span>Git &amp; GitHub</span></div>
+</section>
+
+<section class="closing reveal">
+  <h2>Curious how a number was reached?</h2>
+  <p>Every model shows its inputs, and every project links to its data and method. Open one and change an assumption.</p>
+  <div class="cta" style="margin-top:0">
+    <a class="btn primary" href="#models">▶ Try a model</a>
+    <a class="btn ghost" href="https://www.linkedin.com/in/shakila-azad2005/">Connect on LinkedIn</a>
+    <a class="btn ghost" href="https://github.com/sazad-here">GitHub</a>
+  </div>
+</section>
+<footer>Built from real datasets · every figure checked against its source.</footer>
+</main>
+
 <script>
-  const root = document.documentElement, saved = localStorage.getItem('theme');
-  if (saved) root.dataset.theme = saved;
-  document.getElementById('theme').addEventListener('click', () => {
-    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-    root.dataset.theme = dark ? 'light' : 'dark'; localStorage.setItem('theme', root.dataset.theme);
+(() => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const root = document.documentElement;
+  const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // theme toggle (shared key with the model pages)
+  const saved = localStorage.getItem('theme'); if (saved) root.dataset.theme = saved;
+  document.getElementById('theme').addEventListener('click', () => { root.dataset.theme = isDark() ? 'light' : 'dark'; localStorage.setItem('theme', root.dataset.theme); });
+
+  // nav border once scrolled
+  const nav = document.getElementById('nav');
+  addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 8), { passive: true });
+
+  // rotating headline phrase
+  const phrases = ['decisions you can play with', 'models you can question', 'answers you can test'];
+  const rot = document.getElementById('rot'); let pi = 0;
+  if (!reduced) setInterval(() => {
+    rot.classList.replace('in', 'out');
+    setTimeout(() => { pi = (pi + 1) % phrases.length; rot.textContent = phrases[pi]; rot.classList.replace('out', 'in'); }, 260);
+  }, 3200);
+
+  // reveal on scroll + counters
+  const count = el => {
+    const to = +el.dataset.to, suf = el.dataset.suffix || '', t0 = performance.now(), dur = reduced ? 0 : 1300;
+    const step = now => { const t = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - t, 3); el.textContent = Math.round(to * e) + (t === 1 ? suf : ''); if (t < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('shown');
+    if (e.target.id === 'counters') e.target.querySelectorAll('.num').forEach(count);
+    io.unobserve(e.target);
+  }), { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // project filters
+  const chips = [...document.querySelectorAll('.chip')], cards = [...document.querySelectorAll('.projects .card')];
+  chips.forEach(c => c.addEventListener('click', () => {
+    chips.forEach(x => x.classList.toggle('on', x === c));
+    cards.forEach(card => {
+      const show = c.dataset.f === 'all' || card.dataset.tags.split(' ').includes(c.dataset.f);
+      if (show) { card.classList.remove('hidden'); requestAnimationFrame(() => card.style.opacity = 1); }
+      else { card.style.opacity = 0; setTimeout(() => card.classList.add('hidden'), reduced ? 0 : 250); }
+    });
+  }));
+
+  // model gallery (duplicated once for a seamless loop)
+  const M = [
+    ['healthcare-analytics/01-Hospital-Profit-DSS', 'healthcare-analytics/assets/thumbs/01-Hospital-Profit-DSS.png', 'Hospital profit simulator', 'Health'],
+    ['managerial-decision-making/04-product-mix', 'managerial-decision-making/assets/thumbs/04-product-mix.png', 'Product mix optimizer', 'Decisions'],
+    ['healthcare-analytics/03-Causes-of-Death-Analysis', 'healthcare-analytics/assets/thumbs/03-Causes-of-Death-Analysis.png', 'Causes-of-death race', 'Health'],
+    ['managerial-decision-making/05-operations', 'managerial-decision-making/assets/thumbs/05-operations.png', 'Operations optimizer', 'Decisions'],
+    ['healthcare-analytics/04-Obesity-Analysis', 'healthcare-analytics/assets/thumbs/04-Obesity-Analysis.png', 'Obesity map, 2011–2024', 'Health'],
+    ['managerial-decision-making/06-decision-lab', 'managerial-decision-making/assets/thumbs/06-decision-lab.png', 'Decision lab', 'Decisions'],
+    ['healthcare-analytics/06-BigOrganics-SAS-Analytics', 'healthcare-analytics/assets/thumbs/06-BigOrganics-SAS-Analytics.png', 'Who buys organic?', 'Health'],
+    ['managerial-decision-making/01-regression', 'managerial-decision-making/assets/thumbs/01-regression.png', 'Regression lab', 'Decisions'],
+    ['healthcare-analytics/07-Hospital-Financial-Analysis', 'healthcare-analytics/assets/thumbs/07-Hospital-Financial-Analysis.png', '444 reports, 432 hospitals', 'Health'],
+    ['managerial-decision-making/07-retirement-case', 'managerial-decision-making/assets/thumbs/07-retirement-case.png', 'Retirement savings case', 'Decisions'],
+    ['healthcare-analytics/08-Heart-Risk-Analysis', 'healthcare-analytics/assets/thumbs/08-Heart-Risk-Analysis.png', 'Heart risk tree', 'Health'],
+    ['managerial-decision-making/02-distributions', 'managerial-decision-making/assets/thumbs/02-distributions.png', 'Distribution explorer', 'Decisions'],
+    ['healthcare-analytics/02-Global-Hunger-Index', 'healthcare-analytics/assets/thumbs/02-Global-Hunger-Index.png', 'Hunger over time', 'Health'],
+    ['managerial-decision-making/03-relationships', 'managerial-decision-making/assets/thumbs/03-relationships.png', 'Relationship explorer', 'Decisions'],
+  ];
+  const track = document.getElementById('track');
+  [...M, ...(reduced ? [] : M)].forEach(([href, img, title, tag], i) => {
+    const a = document.createElement('a'); a.className = 'tile'; a.href = href + '/model.html';
+    if (i >= M.length) { a.setAttribute('aria-hidden', 'true'); a.tabIndex = -1; }
+    const im = document.createElement('img'); im.src = img; im.alt = i >= M.length ? '' : title + ' preview'; im.loading = 'lazy';
+    const t = document.createElement('div'); t.className = 't'; t.textContent = title;
+    const s = document.createElement('span'); s.textContent = tag; t.appendChild(s);
+    a.append(im, t); track.appendChild(a);
   });
-  // the reliance study is a live data-collection site: confirm before opening it
+
+  // the live study is a data-collection site: confirm before opening it
   document.querySelectorAll('a.live-study').forEach(a => a.addEventListener('click', e => {
     if (!confirm('This opens a live research study. Starting a session adds a real response to the study data.\n\nContinue only if you want to take part.')) e.preventDefault();
   }));
+
+  // hero: a living scatter plot whose least-squares line refits every frame
+  const cv = document.getElementById('field'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, pts = [], mouse = null;
+  const resize = () => {
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = W < 700 ? 34 : 64;
+    pts = Array.from({ length: n }, (_, i) => {
+      const x = W * (0.6 + 0.38 * Math.random()), base = H * (0.6 - 0.44 * (x - W * 0.6) / (W * 0.38));
+      return { x, y: base + (Math.random() - 0.5) * H * 0.2, ph: Math.random() * 6.28, sp: 0.3 + Math.random() * 0.6, r: 2 + Math.random() * 2.6 };
+    });
+  };
+  addEventListener('resize', resize); resize();
+  document.querySelector('.hero').addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); mouse = { x: e.clientX - r.left, y: e.clientY - r.top }; });
+  document.querySelector('.hero').addEventListener('pointerleave', () => mouse = null);
+  const frame = t => {
+    ctx.clearRect(0, 0, W, H);
+    const dark = isDark(), dotC = dark ? '91,155,232' : '31,95,174', lineC = dark ? '233,163,90' : '217,130,43';
+    const P = pts.map(p => {
+      let dx = Math.sin(t / 1000 * p.sp + p.ph) * 10, dy = Math.cos(t / 1300 * p.sp + p.ph) * 12;
+      if (mouse) { const mx = mouse.x - p.x, my = mouse.y - p.y, d = Math.hypot(mx, my); if (d < 160) { dx += mx * (1 - d / 160) * 0.35; dy += my * (1 - d / 160) * 0.35; } }
+      return { x: p.x + dx, y: p.y + dy, r: p.r };
+    });
+    const n = P.length, mx = P.reduce((s, p) => s + p.x, 0) / n, my = P.reduce((s, p) => s + p.y, 0) / n;
+    const b = P.reduce((s, p) => s + (p.x - mx) * (p.y - my), 0) / P.reduce((s, p) => s + (p.x - mx) ** 2, 0), a = my - b * mx;
+    const x0 = W * 0.56, x1 = W;
+    P.forEach(p => { // residuals
+      ctx.strokeStyle = `rgba(${lineC},0.18)`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, a + b * p.x); ctx.stroke();
+    });
+    const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, `rgba(${lineC},0)`); g.addColorStop(0.25, `rgba(${lineC},0.85)`); g.addColorStop(1, `rgba(${lineC},0.85)`);
+    ctx.strokeStyle = g; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x0, a + b * x0); ctx.lineTo(x1, a + b * x1); ctx.stroke();
+    P.forEach(p => { ctx.fillStyle = `rgba(${dotC},${W < 700 ? 0.22 : 0.42})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); });
+    if (!reduced) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
